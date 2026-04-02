@@ -34,15 +34,12 @@ api.interceptors.response.use(
         router.push("/login");
         ElMessage.error("登录已过期，请重新登录");
       }
-    } else if (error.response?.status === 403) {
-      ElMessage.error("没有权限执行此操作");
-    } else if (error.response?.status === 404) {
-      ElMessage.error("请求的资源不存在");
     } else if (error.response?.status >= 500) {
       ElMessage.error("服务器错误，请稍后重试");
     } else if (!error.response) {
       ElMessage.error("网络连接失败，请检查网络");
     }
+    // 403和404错误由调用方自行处理，不在此统一显示
     
     return Promise.reject(error);
   },
