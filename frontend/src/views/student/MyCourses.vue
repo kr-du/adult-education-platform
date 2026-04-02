@@ -1,0 +1,229 @@
+<template>
+  <div class="my-courses py-4">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">我的课程</h2>
+        <router-link to="/courses" class="btn btn-primary">
+          <el-icon class="me-1"><Plus /></el-icon>选修更多课程
+        </router-link>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-lg-4 col-md-6">
+          <el-input
+            v-model="searchQuery"
+            placeholder="搜索我的课程..."
+            :prefix-icon="Search"
+            clearable
+            size="large"
+            @input="filterCourses"
+          />
+        </div>
+        <div class="col-lg-3 col-md-6 mt-2 mt-md-0">
+          <el-select v-model="progressFilter" placeholder="学习进度" clearable size="large" class="w-100" @change="filterCourses">
+            <el-option label="未开始" value="not_started" />
+            <el-option label="学习中" value="in_progress" />
+            <el-option label="已完成" value="completed" />
+          </el-select>
+        </div>
+      </div>
+
+      <el-skeleton :loading="loading" animated :count="6">
+        <template #template>
+          <div class="row g-4">
+            <div v-for="i in 6" :key="i" class="col-lg-4 col-md-6">
+              <el-card><el-skeleton-item variant="image" style="height:140px;" /><div class="mt-2"><el-skeleton-item variant="h3" /></div></el-card>
+            </div>
+          </div>
+        </template>
+
+        <template #default>
+          <div v-if="filteredEnrollments.length === 0 && !loading" class="text-center py-5">
+            <el-empty description="暂无课程">
+              <router-link to="/courses" class="btn btn-primary">去选课</router-link>
+            </el-empty>
+          </div>
+
+          <div class="row g-4">
+            <div v-for="enrollment in filteredEnrollments" :key="enrollment.id || enrollment.course_id" class="col-lg-4 col-md-6">
+              <el-card shadow="hover" class="h-100 enrollment-card" :body-style="{ padding: '0' }">
+                <div class="course-cover position-relative" style="height: 140px;">
+                  <img v-if="enrollment.course?.cover_image" :src="enrollment.course.cover_image" class="w-100 h-100" style="object-fit: cover;" />
+                  <div v-else class="bg-gradient d-flex align-items-center justify-content-center w-100 h-100">
+                    <el-icon :size="48" class="text-white-50"><VideoPlay /></el-icon>
+                  </div>
+                  <el-tag
+                    class="position-absolute top-0 end-0 m-2"
+                    :type="getStatusType(enrollment.progress)"
+                    size="small"
+                  >
+                    {{ getStatusText(enrollment.progress) }}
+                  </el-tag>
+                </div>
+
+                <div class="p-3">
+                  <h6 class="fw-bold mb-2 text-truncate" :title="enrollment.course_title || enrollment.course?.title">
+                    {{ enrollment.course_title || enrollment.course?.title || '未命名课程' }}
+                  </h6>
+                  <p class="text-muted small mb-2">
+                    <el-icon class="me-1"><User /></el-icon>
+                    {{ enrollment.teacher_name || enrollment.course?.teacher_name || '未知讲师' }}
+                  </p>
+
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                      <small class="text-muted">学习进度</small>
+                      <small class="fw-medium">{{ enrollment.progress || 0 }}%</small>
+                    </div>
+                    <el-progress
+                      :percentage="enrollment.progress || 0"
+                      :stroke-width="8"
+                      :color="getProgressColor(enrollment.progress)"
+                    />
+                  </div>
+
+                  <div class="d-flex justify-content-between text-muted small mb-3">
+                    <span><el-icon class="me-1"><Clock /></el-icon>{{ enrollment.course?.duration || 0 }}课时</span>
+                    <span>报名于 {{ formatDate(enrollment.enrolled_at) }}</span>
+                  </div>
+
+                  <div class="d-flex gap-2">
+                    <router-link :to="`/learn/${enrollment.course_id}`" class="btn btn-primary btn-sm flex-grow-1">
+                      {{ (enrollment.progress || 0) > 0 ? '继续学习' : '开始学习' }}
+                    </router-link>
+                    <router-link :to="`/student/course/${enrollment.course_id}/questions`" class="btn btn-outline-primary btn-sm">
+                      <el-icon class="me-1"><ChatDotRound /></el-icon>答疑
+                    </router-link>
+                  </div>
+                </div>
+              </el-card>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-center mt-4" v-if="filteredEnrollments.length > 0">
+            <el-pagination
+              v-model:current-page="currentPage"
+              v-model:page-size="pageSize"
+              :page-sizes="[9, 18, 36]"
+              :total="filteredEnrollments.length"
+              layout="total, sizes, prev, pager, next"
+              background
+            />
+          </div>
+        </template>
+      </el-skeleton>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { courseApi } from '@/api'
+import { ElMessage } from 'element-plus'
+import { Search, Plus, VideoPlay, User, Clock, ChatDotRound } from '@element-plus/icons-vue'
+
+const loading = ref(true)
+const enrollments = ref([])
+const searchQuery = ref('')
+const progressFilter = ref('')
+const currentPage = ref(1)
+const pageSize = ref(9)
+
+const filteredEnrollments = computed(() => {
+  let result = [...enrollments.value]
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    result = result.filter(e => {
+      const title = (e.course_title || e.course?.title || '').toLowerCase()
+      return title.includes(q)
+    })
+  }
+
+  if (progressFilter.value) {
+    result = result.filter(e => {
+      const p = e.progress || 0
+      if (progressFilter.value === 'not_started') return p === 0
+      if (progressFilter.value === 'in_progress') return p > 0 && p < 100
+      if (progressFilter.value === 'completed') return p >= 100
+      return true
+    })
+  }
+
+  return result
+})
+
+function getStatusText(progress) {
+  if (!progress || progress === 0) return '未开始'
+  if (progress >= 100) return '已完成'
+  return '学习中'
+}
+
+function getStatusType(progress) {
+  if (!progress || progress === 0) return 'info'
+  if (progress >= 100) return 'success'
+  return 'warning'
+}
+
+function getProgressColor(progress) {
+  if (progress >= 100) return '#67c23a'
+  if (progress >= 50) return '#409eff'
+  return '#e6a23c'
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '未知'
+  return new Date(dateStr).toLocaleDateString('zh-CN')
+}
+
+function filterCourses() {
+  currentPage.value = 1
+}
+
+async function fetchEnrollments() {
+  loading.value = true
+  try {
+    const res = await courseApi.getMyEnrollments()
+    enrollments.value = res.data.enrollments || res.data || []
+  } catch (e) {
+    ElMessage.error('获取课程列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchEnrollments()
+})
+</script>
+
+<style scoped>
+.enrollment-card {
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.enrollment-card:hover {
+  transform: translateY(-4px);
+}
+
+.bg-gradient {
+  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+}
+    /* 响应式样式 */
+    @media (max-width: 992px) {
+      /* 平板适配 */
+    }
+
+    @media (max-width: 768px) {
+      /* 手机适配 */
+      .page-header { flex-direction: column; gap: 12px; }
+      .el-card { margin-bottom: 12px; }
+      .el-table { font-size: 12px; }
+    .d-flex { flex-wrap: wrap; }
+      .stats-card { margin-bottom: 12px; }
+    }
+
+    @media (max-width: 576px) {
+      /* 小手机适配 */
+    }
+</style>

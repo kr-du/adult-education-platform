@@ -1,0 +1,298 @@
+<template>
+  <div class="student-dashboard py-4">
+    <div class="container">
+      <h2 class="fw-bold mb-4">学习中心</h2>
+
+      <el-skeleton :loading="loading" animated :count="4">
+        <template #template>
+          <div class="row g-4 mb-4">
+            <div v-for="i in 4" :key="i" class="col-lg-3 col-md-6">
+              <el-card><el-skeleton-item variant="h1" /></el-card>
+            </div>
+          </div>
+        </template>
+
+        <template #default>
+          <div class="row g-4 mb-4">
+            <div class="col-lg-3 col-md-6" v-for="stat in stats" :key="stat.label">
+              <el-card shadow="hover" class="stat-card text-center">
+                <el-icon :size="40" :class="`mb-3 ${stat.iconColor}`">
+                  <component :is="stat.icon" />
+                </el-icon>
+                <h3 class="fw-bold mb-1">{{ stat.value }}</h3>
+                <p class="text-muted mb-0">{{ stat.label }}</p>
+              </el-card>
+            </div>
+          </div>
+
+          <div class="row g-4 mb-4">
+            <div class="col-lg-8 mb-4 mb-lg-0">
+              <el-card shadow="never">
+                <template #header>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">最近学习</span>
+                    <router-link to="/student/my-courses" class="btn btn-sm btn-outline-primary">查看全部</router-link>
+                  </div>
+                </template>
+                <div v-if="recentCourses.length === 0">
+                  <el-empty description="暂无学习记录" :image-size="80">
+                    <router-link to="/courses" class="btn btn-primary btn-sm">去选课</router-link>
+                  </el-empty>
+                </div>
+                <div v-else>
+                  <div
+                    v-for="course in recentCourses"
+                    :key="course.id"
+                    class="d-flex align-items-center py-3 border-bottom recent-course-item"
+                  >
+                    <div
+                      class="rounded me-3 flex-shrink-0 overflow-hidden"
+                      style="width: 80px; height: 50px;"
+                    >
+                      <img
+                        v-if="course.cover_image"
+                        :src="course.cover_image"
+                        class="w-100 h-100"
+                        style="object-fit: cover;"
+                        :alt="course.title"
+                      />
+                      <div
+                        v-else
+                        class="bg-gradient w-100 h-100 d-flex align-items-center justify-content-center"
+                      >
+                        <el-icon :size="20" class="text-white-50"><VideoPlay /></el-icon>
+                      </div>
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                      <h6 class="mb-1 text-truncate">{{ course.title }}</h6>
+                      <el-progress
+                        :percentage="course.progress || 0"
+                        :stroke-width="6"
+                        :format="(p) => `${p}%`"
+                        class="mb-1"
+                      />
+                    </div>
+                    <router-link :to="`/learn/${course.id}`" class="btn btn-primary btn-sm ms-3 flex-shrink-0">
+                      {{ course.progress >= 100 ? '已完成' : course.progress > 0 ? '继续' : '开始学习' }}
+                    </router-link>
+                  </div>
+                </div>
+              </el-card>
+            </div>
+
+            <div class="col-lg-4">
+              <el-card shadow="never" class="mb-4">
+                <template #header>
+                  <span class="fw-bold">待完成作业</span>
+                </template>
+                <div v-if="pendingAssignments.length === 0">
+                  <el-empty description="暂无待完成作业" :image-size="60" />
+                </div>
+                <div v-else>
+                  <div
+                    v-for="assignment in pendingAssignments"
+                    :key="assignment.id"
+                    class="d-flex justify-content-between align-items-center py-2 border-bottom"
+                  >
+                    <div class="min-w-0">
+                      <p class="mb-0 text-truncate fw-medium">{{ assignment.title }}</p>
+                      <small class="text-muted">{{ assignment.course_title }}</small>
+                    </div>
+                    <router-link :to="`/student/assignments`" class="btn btn-outline-warning btn-sm flex-shrink-0">
+                      去完成
+                    </router-link>
+                  </div>
+                </div>
+              </el-card>
+
+              <el-card shadow="never">
+                <template #header>
+                  <span class="fw-bold">平台公告</span>
+                </template>
+                <div v-if="announcements.length === 0">
+                  <el-empty description="暂无公告" :image-size="60" />
+                </div>
+                <div v-else>
+                  <div
+                    v-for="item in announcements"
+                    :key="item.id"
+                    class="py-2 border-bottom"
+                  >
+                    <div class="d-flex justify-content-between mb-1">
+                      <span class="fw-medium text-truncate me-2">{{ item.title }}</span>
+                      <small class="text-muted flex-shrink-0">{{ formatDate(item.created_at) }}</small>
+                    </div>
+                    <p class="text-muted small mb-0" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                      {{ item.content }}
+                    </p>
+                  </div>
+                </div>
+              </el-card>
+            </div>
+          </div>
+
+          <div class="row g-4">
+            <div class="col-12">
+              <el-card shadow="never">
+                <template #header>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">我的成绩</span>
+                    <router-link to="/student/grades" class="btn btn-sm btn-outline-primary">查看全部</router-link>
+                  </div>
+                </template>
+                <div v-if="grades.length === 0">
+                  <el-empty description="暂无成绩数据" :image-size="80" />
+                </div>
+                <el-table v-else :data="grades.slice(0, 5)" stripe>
+                  <el-table-column prop="course_title" label="课程名称" min-width="200" show-overflow-tooltip />
+                  <el-table-column prop="assignment_title" label="作业名称" min-width="150" show-overflow-tooltip />
+                  <el-table-column prop="score" label="分数" width="100" align="center">
+                    <template #default="{ row }">
+                      <span :class="getScoreClass(row.score)">{{ row.score ?? '-' }}</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="feedback" label="评语" min-width="200" show-overflow-tooltip />
+                </el-table>
+              </el-card>
+            </div>
+          </div>
+        </template>
+      </el-skeleton>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/store/user'
+import { courseApi, userApi, adminApi, assignmentApi } from '@/api'
+import { ElMessage } from 'element-plus'
+import { VideoPlay, Reading, Edit, ChatDotRound } from '@element-plus/icons-vue'
+
+const userStore = useUserStore()
+
+const loading = ref(true)
+const enrollments = ref([])
+const grades = ref([])
+const announcements = ref([])
+const assignments = ref([])
+
+const recentCourses = computed(() => {
+  return enrollments.value
+    .sort((a, b) => {
+      const dateA = new Date(a.enrolled_at || 0)
+      const dateB = new Date(b.enrolled_at || 0)
+      return dateB - dateA
+    })
+    .slice(0, 5)
+    .map(e => ({
+      id: e.course_id,
+      title: e.course_title || e.course?.title || '未命名课程',
+      cover_image: e.course?.cover_image || null,
+      progress: e.progress || 0
+    }))
+})
+
+const pendingAssignments = computed(() => {
+  const now = new Date()
+  return assignments.value
+    .filter(a => !a.submitted && (!a.due_date || new Date(a.due_date) > now))
+    .slice(0, 5)
+    .map(a => ({
+      id: a.id,
+      title: a.title,
+      course_title: a.course_title || '未知课程'
+    }))
+})
+
+const stats = computed(() => [
+  { label: '已选课程', value: enrollments.value.length, icon: Reading, iconColor: 'text-primary' },
+  { label: '学习中', value: enrollments.value.filter(e => e.progress > 0 && e.progress < 100).length, icon: VideoPlay, iconColor: 'text-warning' },
+  { label: '已完成', value: enrollments.value.filter(e => e.progress >= 100).length, icon: Edit, iconColor: 'text-success' },
+  { label: '获得成绩', value: grades.value.length, icon: ChatDotRound, iconColor: 'text-info' }
+])
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+}
+
+function getScoreClass(score) {
+  if (score == null) return ''
+  if (score >= 90) return 'text-success fw-bold'
+  if (score >= 60) return 'text-primary'
+  return 'text-danger fw-bold'
+}
+
+async function fetchData() {
+  loading.value = true
+  try {
+    const [enrollRes, gradeRes, announceRes, assignRes] = await Promise.allSettled([
+      courseApi.getMyEnrollments(),
+      userApi.getGrades(),
+      adminApi.getAnnouncements(),
+      assignmentApi.getStudentAssignments()
+    ])
+
+    if (enrollRes.status === 'fulfilled') {
+      enrollments.value = enrollRes.value.data.enrollments || enrollRes.value.data || []
+    }
+    if (gradeRes.status === 'fulfilled') {
+      grades.value = gradeRes.value.data.grades || gradeRes.value.data || []
+    }
+    if (announceRes.status === 'fulfilled') {
+      announcements.value = (announceRes.value.data.announcements || announceRes.value.data || []).slice(0, 5)
+    }
+    if (assignRes.status === 'fulfilled') {
+      assignments.value = assignRes.value.data.assignments || assignRes.value.data || []
+    }
+  } catch (e) {
+    ElMessage.error('获取数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchData()
+})
+</script>
+
+<style scoped>
+.stat-card {
+  transition: transform 0.3s;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+}
+
+.bg-gradient {
+  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+}
+
+.recent-course-item:last-child {
+  border-bottom: none !important;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+    /* 响应式样式 */
+    @media (max-width: 992px) {
+      /* 平板适配 */
+    }
+
+    @media (max-width: 768px) {
+      /* 手机适配 */
+      .page-header { flex-direction: column; gap: 12px; }
+      .el-card { margin-bottom: 12px; }
+      .el-table { font-size: 12px; }
+      .stats-card { margin-bottom: 12px; }
+    .d-flex { flex-wrap: wrap; }
+    }
+
+    @media (max-width: 576px) {
+      /* 小手机适配 */
+    }
+</style>

@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # MySQL数据库
+  db:
+    image: mysql:8.0
+    container_name: education-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-Education@2024}
+      MYSQL_DATABASE: ${DB_NAME:-adult_education}
+      MYSQL_USER: ${DB_USER:-education_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-Education@2024}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+    networks:
+      - education-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Flask后端
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: education-backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=mysql+pymysql://${DB_USER:-education_user}:${DB_PASSWORD:-Education@2024}@db:3306/${DB_NAME:-adult_education}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-jwt-secret-key-change-this}
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/backups:/app/backups
+    ports:
+      - "5000:5000"
+    networks:
+      - education-network
+
+  # Nginx前端
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-/api}
+    container_name: education-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./backend/uploads:/usr/share/nginx/html/uploads
+    networks:
+      - education-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  education-network:
+    driver: bridge

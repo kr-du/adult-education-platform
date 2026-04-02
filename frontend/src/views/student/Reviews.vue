@@ -1,0 +1,203 @@
+<template>
+  <div class="reviews-page py-4">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">我的评价</h2>
+        <router-link to="/courses" class="btn btn-primary">
+          <el-icon class="me-1"><Edit /></el-icon>去写评价
+        </router-link>
+      </div>
+
+      <el-skeleton :loading="loading" animated :count="4">
+        <template #template>
+          <div class="d-flex flex-column gap-3">
+            <div v-for="i in 4" :key="i" class="card shadow-sm">
+              <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                  <el-skeleton-item variant="h3" style="width:40%;" />
+                  <el-skeleton-item variant="button" style="width:60px;" />
+                </div>
+                <el-skeleton-item variant="text" style="width:30%;" />
+                <el-skeleton-item variant="text" style="width:100%;" />
+                <el-skeleton-item variant="text" style="width:80%;" />
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template #default>
+          <div v-if="reviews.length === 0 && !loading" class="text-center py-5">
+            <el-empty description="暂无评价">
+              <p class="text-muted">你还没有对任何课程进行评价</p>
+              <router-link to="/courses" class="btn btn-primary">浏览课程</router-link>
+            </el-empty>
+          </div>
+
+          <div class="d-flex flex-column gap-3">
+            <div
+              v-for="review in reviews"
+              :key="review.id"
+              class="card shadow-sm review-card"
+            >
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div>
+                    <h6 class="fw-bold mb-1">
+                      <router-link
+                        :to="`/course/${review.course_id}`"
+                        class="text-decoration-none text-dark course-link"
+                      >
+                        {{ review.course_title || '未命名课程' }}
+                      </router-link>
+                    </h6>
+                    <el-rate
+                      :model-value="review.rating"
+                      disabled
+                      show-score
+                      score-template="{value} 分"
+                      size="small"
+                    />
+                  </div>
+                  <el-popconfirm
+                    title="确定要删除这条评价吗？"
+                    confirm-button-text="确认删除"
+                    cancel-button-text="取消"
+                    @confirm="handleDelete(review.id)"
+                  >
+                    <template #reference>
+                      <el-button
+                        type="danger"
+                        text
+                        size="small"
+                        :loading="deletingId === review.id"
+                      >
+                        <el-icon class="me-1"><Delete /></el-icon>删除
+                      </el-button>
+                    </template>
+                  </el-popconfirm>
+                </div>
+
+                <p class="mb-2 review-content">{{ review.content }}</p>
+
+                <div class="d-flex justify-content-between align-items-center">
+                  <small class="text-muted">{{ formatDate(review.created_at) }}</small>
+                  <el-tag v-if="review.is_anonymous" size="small" type="info">匿名评价</el-tag>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </el-skeleton>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { interactionApi, courseApi } from '@/api'
+import { useUserStore } from '@/store/user'
+import { ElMessage } from 'element-plus'
+import { Edit, Delete } from '@element-plus/icons-vue'
+
+const userStore = useUserStore()
+const loading = ref(true)
+const deletingId = ref(null)
+const reviews = ref([])
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+async function fetchReviews() {
+  loading.value = true
+  try {
+    const res = await courseApi.getMyEnrollments()
+    const enrollments = res.data.enrollments || res.data || []
+    const courseIds = enrollments.map(e => e.course_id)
+
+    const allReviews = []
+    await Promise.all(
+      courseIds.map(async (courseId) => {
+        try {
+          const r = await interactionApi.getCourseReviews(courseId)
+          const courseReviews = r.data.reviews || r.data || []
+          const courseTitle = enrollments.find(e => e.course_id === courseId)?.course_title || ''
+          courseReviews.forEach(review => {
+            if (review.user_id === userStore.user.id) {
+              allReviews.push({ ...review, course_title: courseTitle, course_id: courseId })
+            }
+          })
+        } catch {}
+      })
+    )
+
+    allReviews.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    reviews.value = allReviews
+  } catch (e) {
+    ElMessage.error('获取评价列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleDelete(id) {
+  deletingId.value = id
+  try {
+    await interactionApi.deleteReview(id)
+    reviews.value = reviews.value.filter(r => r.id !== id)
+    ElMessage.success('评价已删除')
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || '删除失败')
+  } finally {
+    deletingId.value = null
+  }
+}
+
+onMounted(() => {
+  fetchReviews()
+})
+</script>
+
+<style scoped>
+.review-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.review-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.course-link:hover {
+  color: #409eff !important;
+}
+
+.review-content {
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+    /* 响应式样式 */
+    @media (max-width: 992px) {
+      /* 平板适配 */
+    }
+
+    @media (max-width: 768px) {
+      /* 手机适配 */
+      .page-header { flex-direction: column; gap: 12px; }
+      .el-card { margin-bottom: 12px; }
+      .el-table { font-size: 12px; }
+    .d-flex { flex-wrap: wrap; }
+      .stats-card { margin-bottom: 12px; }
+    }
+
+    @media (max-width: 576px) {
+      /* 小手机适配 */
+    }
+</style>

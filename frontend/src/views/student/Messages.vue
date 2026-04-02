@@ -1,0 +1,276 @@
+<template>
+  <div class="messages-page py-4">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">消息通知</h2>
+        <el-button
+          type="primary"
+          plain
+          :loading="markingAll"
+          :disabled="messages.length === 0"
+          @click="handleMarkAllRead"
+        >
+          <el-icon class="me-1"><Check /></el-icon>全部已读
+        </el-button>
+      </div>
+
+      <el-skeleton :loading="loading" animated :count="5">
+        <template #template>
+          <div class="d-flex flex-column gap-3">
+            <div v-for="i in 5" :key="i" class="card shadow-sm">
+              <div class="card-body d-flex align-items-center gap-3">
+                <el-skeleton-item variant="circle" style="width:40px;height:40px;" />
+                <div class="flex-grow-1">
+                  <el-skeleton-item variant="h3" style="width:60%;" />
+                  <el-skeleton-item variant="text" style="width:80%;" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template #default>
+          <div v-if="messages.length === 0 && !loading" class="text-center py-5">
+            <el-empty description="暂无消息">
+              <p class="text-muted">暂时没有任何通知消息</p>
+            </el-empty>
+          </div>
+
+          <div class="d-flex flex-column gap-3">
+            <div
+              v-for="msg in messages"
+              :key="msg.id"
+              class="card shadow-sm message-card"
+              :class="{ 'message-unread': !msg.is_read }"
+              @click="handleClickMessage(msg)"
+            >
+              <div class="card-body d-flex align-items-start gap-3">
+                <div class="message-icon flex-shrink-0">
+                  <el-icon :size="24"><component :is="getTypeIcon(msg.message_type)" /></el-icon>
+                </div>
+
+                <div class="flex-grow-1 min-width-0">
+                  <div class="d-flex justify-content-between align-items-start mb-1">
+                    <h6 class="mb-0 fw-medium" :class="{ 'text-primary': !msg.is_read }">
+                      {{ msg.title }}
+                    </h6>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-3">
+                      <span class="unread-dot" v-if="!msg.is_read"></span>
+                      <small class="text-muted">{{ formatDate(msg.created_at) }}</small>
+                    </div>
+                  </div>
+                  <p class="mb-1 text-muted small text-truncate">{{ msg.content }}</p>
+                  <el-tag size="small" :type="getTypeTagType(msg.message_type)">{{ getTypeLabel(msg.message_type) }}</el-tag>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </el-skeleton>
+
+      <!-- 消息详情弹窗 -->
+      <el-dialog
+        v-model="dialogVisible"
+        title="消息详情"
+        width="500px"
+        :close-on-click-modal="true"
+      >
+        <div v-if="selectedMessage" class="message-detail">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <el-tag size="small" :type="getTypeTagType(selectedMessage.message_type)">
+              {{ getTypeLabel(selectedMessage.message_type) }}
+            </el-tag>
+            <span class="text-muted small">{{ formatDate(selectedMessage.created_at) }}</span>
+          </div>
+          <h5 class="mb-3">{{ selectedMessage.title }}</h5>
+          <div class="message-content">
+            {{ selectedMessage.content }}
+          </div>
+        </div>
+        <template #footer>
+          <el-button @click="dialogVisible = false">关闭</el-button>
+        </template>
+      </el-dialog>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { interactionApi } from '@/api'
+import { useUserStore } from '@/store/user'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Check, Setting, Reading, Document } from '@element-plus/icons-vue'
+
+const userStore = useUserStore()
+const loading = ref(true)
+const markingAll = ref(false)
+const messages = ref([])
+const dialogVisible = ref(false)
+const selectedMessage = ref(null)
+
+const typeIconMap = {
+  system: Setting,
+  course: Reading,
+  assignment: Document
+}
+
+function getTypeIcon(type) {
+  return typeIconMap[type] || Setting
+}
+
+function getTypeLabel(type) {
+  const map = {
+    system: '系统通知',
+    course: '课程消息',
+    assignment: '作业通知'
+  }
+  return map[type] || '系统通知'
+}
+
+function getTypeTagType(type) {
+  const map = {
+    system: 'info',
+    course: 'success',
+    assignment: 'warning'
+  }
+  return map[type] || 'info'
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = now - date
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  if (hours < 24) return `${hours}小时前`
+  if (days < 7) return `${days}天前`
+  return date.toLocaleDateString('zh-CN')
+}
+
+async function fetchMessages() {
+  loading.value = true
+  try {
+    const res = await interactionApi.getMessages()
+    messages.value = res.data.messages || res.data || []
+  } catch (e) {
+    ElMessage.error('获取消息列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleClickMessage(msg) {
+  selectedMessage.value = msg
+  dialogVisible.value = true
+  
+  if (!msg.is_read) {
+    try {
+      await interactionApi.markMessageRead(msg.id)
+      msg.is_read = true
+    } catch (e) {
+      console.error('标记已读失败')
+    }
+  }
+}
+
+async function handleMarkAllRead() {
+  if (messages.value.every(m => m.is_read)) {
+    ElMessage.info('没有未读消息')
+    return
+  }
+  markingAll.value = true
+  try {
+    await interactionApi.markAllMessagesRead()
+    messages.value.forEach(m => { m.is_read = true })
+    ElMessage.success('已全部标为已读')
+  } catch (e) {
+    ElMessage.error('操作失败')
+  } finally {
+    markingAll.value = false
+  }
+}
+
+onMounted(() => {
+  fetchMessages()
+})
+</script>
+
+<style scoped>
+.message-card {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.message-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.message-unread {
+  border-left: 4px solid #409eff;
+  background-color: #f0f7ff;
+}
+
+.message-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #f0f2f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #409eff;
+}
+
+.message-unread .message-icon {
+  background-color: #e6f0ff;
+  color: #409eff;
+}
+
+.unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #409eff;
+}
+
+.min-width-0 {
+  min-width: 0;
+}
+
+.message-detail {
+  padding: 10px 0;
+}
+
+.message-content {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+    /* 响应式样式 */
+    @media (max-width: 992px) {
+      /* 平板适配 */
+    }
+
+    @media (max-width: 768px) {
+      /* 手机适配 */
+      .page-header { flex-direction: column; gap: 12px; }
+      .el-card { margin-bottom: 12px; }
+      .el-table { font-size: 12px; }
+    .d-flex { flex-wrap: wrap; }
+      .stats-card { margin-bottom: 12px; }
+    }
+
+    @media (max-width: 576px) {
+      /* 小手机适配 */
+    }
+</style>
