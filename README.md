@@ -1,86 +1,132 @@
 # 成人再教育学习平台
 
-基于 Python Web 的成人再教育学习平台的设计与实现
+基于 Python Web 的成人再教育学习平台，支持课程学习、作业管理、答疑互动、内容审核等功能。
+
+## 项目简介
+
+本平台是一个面向成人的在线教育系统，提供完整的课程管理、学习跟踪、作业批改、答疑互动等功能。系统采用前后端分离架构，支持多角色（学生、教师、管理员）使用。
 
 ## 技术栈
 
 ### 前端
-- Vue 3
-- Bootstrap 5
-- Element Plus
-- JavaScript
-- 响应式布局（支持电脑、手机、平板）
+- **框架**：Vue 3 + Vite
+- **UI组件**：Element Plus
+- **样式**：Bootstrap 5
+- **状态管理**：Pinia
+- **HTTP请求**：Axios
 
 ### 后端
-- Flask
-- Flask-SQLAlchemy
-- Flask-JWT-Extended
-- Flask-CORS
-- Flask-Migrate
+- **框架**：Flask
+- **数据库ORM**：Flask-SQLAlchemy
+- **用户认证**：Flask-JWT-Extended
+- **跨域处理**：Flask-CORS
+- **数据库迁移**：Flask-Migrate
+- **WSGI服务器**：Gunicorn
 
 ### 数据库
-- MySQL
+- MySQL 8.0
+
+## 功能模块
+
+### 学生端
+| 功能 | 说明 |
+|------|------|
+| 课程浏览 | 浏览、搜索、分类筛选课程 |
+| 课程学习 | 视频播放、倍速、画中画、进度跟踪 |
+| 作业管理 | 查看作业、在线提交、查看成绩 |
+| 答疑互动 | 提问、回答、查看讨论 |
+| 课程评价 | 对已学课程进行评分和评价 |
+| 学习数据 | 查看学习时长、进度、成绩统计 |
+| 消息通知 | 接收系统通知和课程公告 |
+
+### 教师端
+| 功能 | 说明 |
+|------|------|
+| 课程管理 | 创建、编辑、发布、下架课程 |
+| 课时管理 | 上传视频、编辑课时内容 |
+| 作业管理 | 发布作业、批改作业、评分反馈 |
+| 学生管理 | 查看学生列表、学习进度 |
+| 内容审核 | 审核评价、提问、讨论 |
+| 数据统计 | 课程报名、学习完成率统计 |
+
+### 管理员端
+| 功能 | 说明 |
+|------|------|
+| 用户管理 | 审核、编辑、删除用户账号 |
+| 课程管理 | 管理所有课程、分类管理 |
+| 内容审核 | 审核全站评价、提问、讨论 |
+| 公告管理 | 发布系统公告 |
+| 数据备份 | 创建备份、恢复数据、下载备份 |
+| 系统统计 | 用户、课程、学习数据统计 |
 
 ## 项目结构
 
 ```
 adult-education-platform/
-├── backend/                    # Flask后端
+├── backend/                        # Flask后端
 │   ├── app/
-│   │   ├── models/            # 数据模型
-│   │   ├── routes/            # API路由
+│   │   ├── models/                # 数据模型
+│   │   │   ├── user.py           # 用户模型
+│   │   │   ├── course.py         # 课程模型
+│   │   │   ├── assignment.py     # 作业模型
+│   │   │   ├── interaction.py    # 互动模型（评价、问答）
+│   │   │   ├── announcement.py   # 公告、讨论模型
+│   │   │   └── ai.py             # AI对话模型
+│   │   ├── routes/               # API路由
+│   │   │   ├── auth.py           # 认证接口
+│   │   │   ├── courses.py        # 课程接口
+│   │   │   ├── assignments.py    # 作业接口
+│   │   │   ├── users.py          # 用户接口
+│   │   │   ├── admin.py          # 管理员接口
+│   │   │   ├── discussions.py    # 讨论接口
+│   │   │   ├── interactions.py   # 互动接口
+│   │   │   ├── backup.py         # 备份接口
+│   │   │   └── uploads.py        # 上传接口
 │   │   └── __init__.py
-│   ├── config.py              # 配置文件
-│   ├── run.py                 # 启动文件
-│   ├── init_db.py             # 数据库初始化
-│   └── requirements.txt       # 依赖
-├── frontend/                   # Vue3前端
+│   ├── uploads/                   # 上传文件目录
+│   ├── config.py                  # 配置文件
+│   ├── run.py                     # 启动文件
+│   ├── seed_data.py               # 种子数据
+│   ├── requirements.txt           # 依赖
+│   ├── Dockerfile                 # Docker配置
+│   └── gunicorn_config.py         # Gunicorn配置
+├── frontend/                       # Vue3前端
 │   ├── src/
-│   │   ├── api/               # API接口
-│   │   ├── assets/            # 静态资源
-│   │   ├── components/        # 组件
-│   │   ├── router/            # 路由
-│   │   ├── store/             # 状态管理
-│   │   └── views/             # 页面视图
+│   │   ├── api/                   # API接口
+│   │   ├── assets/                # 静态资源
+│   │   ├── components/            # 公共组件
+│   │   ├── directives/            # 自定义指令
+│   │   ├── router/                # 路由配置
+│   │   ├── store/                 # Pinia状态管理
+│   │   ├── utils/                 # 工具函数
+│   │   └── views/                 # 页面视图
+│   │       ├── admin/            # 管理员页面
+│   │       ├── teacher/          # 教师页面
+│   │       └── student/          # 学生页面
+│   ├── nginx.conf                 # Nginx配置
+│   ├── Dockerfile                 # Docker配置
 │   ├── package.json
 │   └── vite.config.js
+├── docker-compose.yml              # Docker编排
+├── deploy.bat                      # Windows部署脚本
+├── deploy.sh                       # Linux部署脚本
+├── .env.example                    # 环境变量示例
+├── .gitignore                      # Git忽略文件
 └── README.md
 ```
 
-## 功能模块
-
-### 学生端
-- 登录、注册、密码重置
-- 课程浏览、搜索、报名
-- 视频课程学习、学习进度跟踪
-- 作业查看、提交
-- 个人中心（学习记录、成绩查询）
-
-### 教师端
-- 课程资源管理（上传、编辑、发布）
-- 作业发布与批改
-- 学员成绩管理
-- 学习数据查看与分析
-- 答疑互动
-
-### 管理员端
-- 用户管理（学员、教师账号审核与权限分配）
-- 课程分类管理
-- 系统公告发布
-- 全站数据统计与报表生成
-- 系统配置与维护
-
 ## 安装部署
 
-### 1. 数据库准备
+### 方式一：本地开发部署
+
+#### 1. 数据库准备
 
 创建 MySQL 数据库：
-
 ```sql
 CREATE DATABASE adult_education CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-### 2. 后端部署
+#### 2. 后端部署
 
 ```bash
 cd backend
@@ -100,8 +146,11 @@ pip install -r requirements.txt
 # 修改数据库配置
 # 编辑 config.py 中的 SQLALCHEMY_DATABASE_URI
 
-# 初始化数据库
-python init_db.py
+# 初始化数据库表
+flask db upgrade
+
+# 填充种子数据
+python seed_data.py
 
 # 启动服务
 python run.py
@@ -109,7 +158,7 @@ python run.py
 
 后端服务运行在 http://localhost:5000
 
-### 3. 前端部署
+#### 3. 前端部署
 
 ```bash
 cd frontend
@@ -126,139 +175,150 @@ npm run build
 
 前端服务运行在 http://localhost:3000
 
+### 方式二：Docker部署
+
+#### 1. 复制环境变量文件
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 文件，修改数据库密码和密钥。
+
+#### 2. 运行部署脚本
+
+**Windows**：
+```bash
+deploy.bat
+```
+
+**Linux/Mac**：
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+#### 3. 手动Docker部署
+
+```bash
+# 构建并启动服务
+docker-compose up -d --build
+
+# 初始化数据库
+docker-compose exec backend python seed_data.py
+```
+
 ## 默认账号
 
-管理员账号：
-- 用户名: admin
-- 密码: admin123
+| 角色 | 用户名 | 密码 |
+|------|--------|------|
+| 管理员 | admin | 123456 |
+| 教师 | zhugeliang | 123456 |
+| 学生 | zhangwei | 123456 |
 
-教师账号：
-- 用户名: teacher_wang (王伟)
-- 密码: teacher123
-- 其他教师: teacher_liu, teacher_zhang, teacher_chen 等
-
-学生账号：
-- 用户名: student001 (李明)
-- 密码: student123
-- 其他学生: student002 ~ student020
+> ⚠️ **安全提示**：首次登录后请立即修改默认密码！
 
 ## API 接口
 
-### 认证相关
-- POST /api/auth/register - 用户注册
-- POST /api/auth/login - 用户登录
-- POST /api/auth/reset-password - 重置密码
-- GET /api/auth/profile - 获取个人信息
-- PUT /api/auth/profile - 更新个人信息
+### 认证接口
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | /api/auth/register | 用户注册 |
+| POST | /api/auth/login | 用户登录 |
+| GET | /api/auth/profile | 获取个人信息 |
+| PUT | /api/auth/profile | 更新个人信息 |
 
-### 课程相关
-- GET /api/courses/ - 获取课程列表
-- GET /api/courses/:id - 获取课程详情
-- POST /api/courses/ - 创建课程
-- PUT /api/courses/:id - 更新课程
-- DELETE /api/courses/:id - 删除课程
-- POST /api/courses/enroll/:id - 报名课程
-- GET /api/courses/my-enrollments - 我的报名
-- POST /api/courses/progress/:id - 更新学习进度
-- GET /api/courses/categories - 获取分类列表
-- POST /api/categories/ - 创建分类
-- PUT /api/categories/:id - 更新分类
-- DELETE /api/categories/:id - 删除分类
+### 课程接口
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/courses/ | 获取课程列表 |
+| GET | /api/courses/:id | 获取课程详情 |
+| POST | /api/courses/ | 创建课程 |
+| PUT | /api/courses/:id | 更新课程 |
+| DELETE | /api/courses/:id | 删除课程 |
+| POST | /api/courses/enroll/:id | 报名课程 |
+| GET | /api/courses/my-enrollments | 我的报名 |
 
-### 作业相关
-- GET /api/assignments/course/:id - 获取课程作业
-- POST /api/assignments/ - 创建作业
-- GET /api/assignments/:id - 获取作业详情
-- POST /api/assignments/submit/:id - 提交作业
-- GET /api/assignments/submissions/:id - 获取提交记录
-- POST /api/assignments/grade/:id - 批改作业
+### 作业接口
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/assignments/course/:id | 获取课程作业 |
+| POST | /api/assignments/ | 创建作业 |
+| POST | /api/assignments/submit/:id | 提交作业 |
+| POST | /api/assignments/grade/:id | 批改作业 |
 
-### 用户相关
-- GET /api/users/learning-records - 学习记录
-- GET /api/users/grades - 成绩查询
-- GET /api/users/teacher/students - 教师学员列表
-- GET /api/users/teacher/statistics - 教师统计数据
-
-### 管理员相关
-- GET /api/admin/users - 用户列表
-- POST /api/admin/users/:id/approve - 审核通过
-- POST /api/admin/users/:id/reject - 审核拒绝
-- DELETE /api/admin/users/:id - 删除用户
-- GET /api/admin/announcements - 公告列表
-- POST /api/admin/announcements - 创建公告
-- PUT /api/admin/announcements/:id - 更新公告
-- DELETE /api/admin/announcements/:id - 删除公告
-- GET /api/admin/statistics - 系统统计
-- GET /api/admin/courses - 全部课程
-
-### 讨论相关
-- GET /api/discussions/course/:id - 课程讨论
-- POST /api/discussions/ - 发布讨论
-- GET /api/discussions/:id/replies - 获取回复
-- DELETE /api/discussions/:id - 删除讨论
-- GET /api/discussions/teacher - 教师讨论列表
+### 管理员接口
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/admin/users | 用户列表 |
+| POST | /api/admin/users/:id/approve | 审核通过 |
+| DELETE | /api/admin/users/:id | 删除用户 |
+| GET | /api/admin/statistics | 系统统计 |
+| POST | /api/backup/export | 创建备份 |
+| POST | /api/backup/restore | 恢复数据 |
 
 ## 数据库模型
 
-### User (用户)
+### 核心模型
+
+**User（用户）**
 - id, username, email, password_hash
 - role (student/teacher/admin)
 - real_name, phone, avatar
 - status (pending/approved/rejected)
-- created_at, updated_at
 
-### Course (课程)
+**Course（课程）**
 - id, title, description, cover_image
 - teacher_id, category_id
 - price, duration, status
-- created_at, updated_at
 
-### Lesson (课时)
+**Lesson（课时）**
 - id, course_id, title
 - video_url, content, duration, order
-- created_at
 
-### Category (分类)
-- id, name, description, parent_id
-- created_at
-
-### Enrollment (报名)
-- id, user_id, course_id
-- enrolled_at, completed, progress
-
-### LessonProgress (学习进度)
-- id, user_id, lesson_id
-- watched_duration, completed
-- last_watched
-
-### Assignment (作业)
+**Assignment（作业）**
 - id, course_id, title, description
 - due_date, max_score
-- created_at
 
-### Submission (提交)
-- id, assignment_id, student_id
-- content, file_url
-- score, feedback
-- submitted_at, graded_at
+**Review（评价）**
+- id, course_id, user_id
+- rating, content, status
 
-### Announcement (公告)
-- id, title, content, author_id
-- is_pinned
-- created_at, updated_at
+**Question（提问）**
+- id, course_id, user_id
+- title, content, is_resolved, status
 
-### Discussion (讨论)
+**Discussion（讨论）**
 - id, course_id, user_id, parent_id
-- content
-- created_at
+- content, status
 
 ## 响应式设计
 
-平台采用 Bootstrap 5 响应式布局，支持：
-- 桌面端（≥1200px）
-- 平板端（768px-1199px）
-- 移动端（<768px）
+平台支持多设备访问：
+- **桌面端**：≥992px
+- **平板端**：768px-991px
+- **移动端**：<768px
 
-## License
+## 视频播放器功能
 
-MIT
+- 倍速播放（0.5x ~ 2x）
+- 画中画模式
+- 快进/快退（10秒）
+- 音量调节
+- 全屏播放
+- 快捷键支持
+
+## 内容审核机制
+
+- 用户提交的内容需审核后才能显示
+- 学生可看到自己待审核的内容（显示"审核中"标签）
+- 教师可审核自己课程的内容
+- 管理员可审核全站内容
+
+## 许可证
+
+MIT License
+
+## 联系方式
+
+如有问题，请提交 Issue 或 Pull Request。
