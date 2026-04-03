@@ -140,7 +140,7 @@
                     <span class="text-muted small">
                       <el-icon class="me-1"><User /></el-icon>{{ course.teacher_name }}
                       <span class="mx-2">|</span>
-                      <el-icon class="me-1"><Clock /></el-icon>{{ course.duration || 0 }}课时
+                      <el-icon class="me-1"><Clock /></el-icon>{{ course.lesson_count || 0 }}课时
                     </span>
                   </div>
                   <div class="col-md-3 text-md-end mt-2 mt-md-0">

@@ -28,7 +28,7 @@
                     <h4 class="fw-bold mb-3">{{ course.title }}</h4>
                     <div class="d-flex flex-wrap gap-3 mb-3">
                       <el-tag v-if="course.category_name" type="info">{{ course.category_name }}</el-tag>
-                      <span class="text-muted"><el-icon class="me-1"><Clock /></el-icon>{{ course.duration || 0 }}课时</span>
+                      <span class="text-muted"><el-icon class="me-1"><Clock /></el-icon>{{ course.lesson_count || 0 }}课时</span>
                       <span class="text-muted"><el-icon class="me-1"><User /></el-icon>{{ course.student_count || 0 }}人学习</span>
                       <span class="text-muted"><el-icon class="me-1"><View /></el-icon>{{ course.view_count || 0 }}次浏览</span>
                     </div>
@@ -390,7 +390,7 @@
                   </div>
                   <div class="d-flex justify-content-between py-2 border-bottom">
                     <span class="text-muted">课程课时</span>
-                    <span>{{ course.duration || 0 }}课时</span>
+                    <span>{{ course.lesson_count || 0 }}课时</span>
                   </div>
                   <div class="d-flex justify-content-between py-2 border-bottom">
                     <span class="text-muted">学习人数</span>

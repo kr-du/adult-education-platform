@@ -83,7 +83,7 @@
                   </div>
 
                   <div class="d-flex justify-content-between text-muted small mb-3">
-                    <span><el-icon class="me-1"><Clock /></el-icon>{{ enrollment.course?.duration || 0 }}课时</span>
+                    <span><el-icon class="me-1"><Clock /></el-icon>{{ enrollment.course?.lesson_count || 0 }}课时</span>
                     <span>报名于 {{ formatDate(enrollment.enrolled_at) }}</span>
                   </div>
 
