@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
 from app import db
 from app.models.course import Course, Category, Lesson, Enrollment, LessonProgress
 from app.models.user import User
@@ -80,7 +80,30 @@ def get_courses():
 @courses_bp.route('/<int:course_id>', methods=['GET'])
 def get_course(course_id):
     course = Course.query.get_or_404(course_id)
+
+    # 安全获取用户：如果未登录，user 为 None
+    user = None
+    try:
+        verify_jwt_in_request(optional=True)
+        user = get_current_user()
+    except Exception:
+        pass
+
     lessons = Lesson.query.filter_by(course_id=course_id).order_by(Lesson.order).all()
+
+    # 权限校验逻辑
+    if course.status == 'draft':
+        # 草稿仅教师/管理员可见
+        if not user or (user.role not in ['teacher', 'admin'] and user.id != course.teacher_id):
+            return jsonify({'error': '课程不存在'}), 404
+    elif course.status == 'archived':
+        # 已归档仅已报名学员可见
+        if user and user.role == 'student':
+            enrollment = Enrollment.query.filter_by(user_id=user.id, course_id=course.id).first()
+            if not enrollment:
+                return jsonify({'error': '该课程已归档，仅限已报名学员访问'}), 403
+        elif not user:
+            return jsonify({'error': '课程已下架'}), 404
 
     # 增加浏览次数
     course.view_count = (course.view_count or 0) + 1
@@ -241,6 +264,10 @@ def add_lesson(course_id):
 @courses_bp.route('/enroll/<int:course_id>', methods=['POST'])
 @jwt_required()
 def enroll_course(course_id):
+    course = Course.query.get_or_404(course_id)
+
+    if course.status != 'published':
+        return jsonify({'error': '该课程暂未开放报名'}), 400
     user = get_current_user()
     if user.role != 'student':
         return jsonify({'error': '只有学生可以报名'}), 403

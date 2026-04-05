@@ -112,7 +112,7 @@ def create_review():
     db.session.commit()
 
     return jsonify({
-        'message': '评价成功，等待审核',
+        'message': '提交成功，内容审核通过后将显示',
         'review': review.to_dict()
     }), 201
 
@@ -249,7 +249,7 @@ def create_question():
     db.session.commit()
 
     return jsonify({
-        'message': '提问成功，等待审核',
+        'message': '提问成功，内容审核通过后将显示',
         'question': question.to_dict()
     }), 201
 
@@ -294,7 +294,7 @@ def create_answer(question_id):
     db.session.commit()
 
     return jsonify({
-        'message': '回答成功，等待审核',
+        'message': '回答成功，内容审核通过后将显示',
         'answer': answer.to_dict()
     }), 201
 

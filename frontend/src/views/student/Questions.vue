@@ -74,6 +74,8 @@
                       <h6 class="fw-bold mb-1 question-title" @click="toggleExpand(question)">
                         {{ question.title }}
                       </h6>
+                      <el-tag v-if="question.status === 'pending'" size="small" type="info" class="ms-2">审核中</el-tag>
+                      <el-tag v-if="question.status === 'rejected'" size="small" type="danger" class="ms-2">已拒绝</el-tag>
                       <div class="d-flex align-items-center flex-wrap gap-2 text-muted small">
                         <span>{{ question.user_name || '匿名学生' }}</span>
                         <span>·</span>
@@ -318,7 +320,7 @@ async function handleReply(question) {
     answers.value.push(newAnswer)
     replyContent.value = ''
     question.answer_count = (question.answer_count || 0) + 1
-    ElMessage.success('回答成功')
+    ElMessage.success('回答成功，内容审核通过后将显示')
   } catch {
     ElMessage.error('回答失败')
   } finally {
@@ -416,7 +418,7 @@ async function handleSubmitQuestion() {
     }
     questions.value.unshift(newQuestion)
     askDialogVisible.value = false
-    ElMessage.success('提问成功')
+    ElMessage.success('提问成功，内容审核通过后将显示')
   } catch (e) {
     ElMessage.error(e.response?.data?.detail || '提问失败')
   } finally {

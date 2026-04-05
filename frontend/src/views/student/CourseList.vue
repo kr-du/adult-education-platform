@@ -200,7 +200,8 @@ async function fetchCourses() {
       per_page: pageSize.value,
       keyword: searchQuery.value || undefined,
       category_id: selectedCategory.value || undefined,
-      sort: sortBy.value
+      sort: sortBy.value,
+      status: 'published'
     }
     const res = await courseApi.getCourses(params)
     courses.value = res.data.courses || []

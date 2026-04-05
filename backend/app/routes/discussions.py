@@ -96,7 +96,7 @@ def create_discussion():
     db.session.commit()
 
     return jsonify({
-        'message': '发布成功',
+        'message': '提交成功，内容审核通过后将显示',
         'discussion': discussion.to_dict()
     }), 201
 

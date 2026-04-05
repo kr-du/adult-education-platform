@@ -497,7 +497,7 @@ async function submitDiscussion() {
     })
     newDiscussion.value = ''
     await fetchDiscussions()
-    ElMessage.success('发表成功')
+    ElMessage.success('发表成功，内容审核通过后将显示')
   } catch (e) {
     handleApiError(e, '发表失败')
   } finally {
@@ -549,7 +549,7 @@ async function submitReply(item) {
     const res = await discussionApi.getReplies(item.id)
     item.replies = res.data.replies || []
     item.reply_count = (item.reply_count || 0) + 1
-    ElMessage.success('回复成功')
+    ElMessage.success('回复成功，内容审核通过后将显示')
   } catch (e) {
     handleApiError(e, '回复失败')
   } finally {
@@ -624,7 +624,7 @@ async function submitReview() {
     })
     newReview.value = { rating: 5, content: '' }
     await fetchReviews()
-    ElMessage.success('评价提交成功')
+    ElMessage.success('评价提交成功，内容审核通过后将显示')
   } catch (e) {
     handleApiError(e, '评价提交失败')
   } finally {

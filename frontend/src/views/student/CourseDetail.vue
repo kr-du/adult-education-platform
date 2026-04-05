@@ -297,7 +297,9 @@
                                <el-avatar :size="32" class="me-2">{{ question.user_name?.charAt(0) || 'U' }}</el-avatar>
                                <div>
                                  <span class="fw-medium">{{ question.user_name || '匿名用户' }}</span>
-                                 <el-tag v-if="question.user_role === 'teacher'" size="small" type="warning" class="ms-2">讲师</el-tag>
+                                  <el-tag v-if="question.user_role === 'teacher'" size="small" type="warning" class="ms-2">讲师</el-tag>
+                                  <el-tag v-if="question.status === 'pending'" size="small" type="info" class="ms-2">审核中</el-tag>
+                                  <el-tag v-if="question.status === 'rejected'" size="small" type="danger" class="ms-2">已拒绝</el-tag>
                                </div>
                              </div>
                              <div class="d-flex align-items-center gap-2">
@@ -316,7 +318,8 @@
                                  <div class="d-flex align-items-center">
                                    <el-avatar :size="24" class="me-2">{{ answer.user_name?.charAt(0) || 'U' }}</el-avatar>
                                    <span class="small fw-medium">{{ answer.user_name }}</span>
-                                   <el-tag v-if="answer.is_teacher" size="small" type="primary" class="ms-1">老师</el-tag>
+                                    <el-tag v-if="answer.is_teacher" size="small" type="primary" class="ms-1">老师</el-tag>
+                                    <el-tag v-if="answer.status === 'pending'" size="small" type="info" class="ms-1">审核中</el-tag>
                                  </div>
                                  <div class="d-flex align-items-center gap-2">
                                    <small class="text-muted">{{ formatDate(answer.created_at) }}</small>
@@ -606,7 +609,7 @@ async function submitQuestion() {
         })
         newQuestion.value = ''
         await fetchQuestions()
-        ElMessage.success('提问成功')
+        ElMessage.success('提问成功，内容审核通过后将显示')
     } catch (e) {
         ElMessage.error(e.response?.data?.error || '提问失败')
     } finally {
@@ -647,7 +650,7 @@ async function submitAnswer(question) {
         // 更新问题的回答数量和显示状态
         question.answer_count = (question.answer_count || 0) + 1
         await fetchQuestions() // 重新获取问题列表以更新答案
-        ElMessage.success('回答成功')
+        ElMessage.success('回答成功，内容审核通过后将显示')
     } catch (e) {
         ElMessage.error(e.response?.data?.error || '回答失败')
     } finally {
@@ -768,7 +771,7 @@ async function submitDiscussion() {
     })
     newDiscussion.value = ''
     await fetchDiscussions()
-    ElMessage.success('发表成功')
+    ElMessage.success('发表成功，内容审核通过后将显示')
   } catch (e) {
     ElMessage.error(e.response?.data?.error || '发表失败')
   } finally {
@@ -880,7 +883,7 @@ async function submitReview() {
     })
     newReview.value = { rating: 5, content: '' }
     await fetchReviews()
-    ElMessage.success('评价成功')
+    ElMessage.success('提交成功，内容审核通过后将显示')
   } catch (e) {
     ElMessage.error(e.response?.data?.error || '评价失败')
   } finally {
