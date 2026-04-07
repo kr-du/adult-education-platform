@@ -1,14 +1,14 @@
 <template>
   <div class="course-edit py-4">
     <div class="container">
-      <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
         <div>
           <router-link to="/teacher/courses" class="text-muted text-decoration-none mb-2 d-inline-block">
             <el-icon class="me-1"><ArrowLeft /></el-icon>返回课程列表
           </router-link>
           <h2 class="fw-bold mb-0">{{ isEditing ? '编辑课程' : '创建课程' }}</h2>
         </div>
-        <el-button type="primary" :loading="saving" @click="saveCourse">
+        <el-button type="primary" :loading="saving" @click="saveCourse" class="mt-2 mt-md-0 w-100 w-md-auto">
           <el-icon class="me-1"><Check /></el-icon>保存课程
         </el-button>
       </div>
@@ -95,25 +95,27 @@
                 </el-empty>
               </div>
 
-              <draggable-list v-else :data="lessons" v-slot="{ item, index }">
-                <div :key="item.id || index" class="lesson-item d-flex align-items-center p-3 mb-2 border rounded bg-white">
-                  <div class="lesson-order me-3 text-muted fw-bold" style="width: 30px;">
-                    {{ index + 1 }}
+              <VueDraggable v-else v-model="lessons" item-key="id" tag="div">
+                <template #item="{ element, index }">
+                  <div :key="element.id || index" class="lesson-item d-flex align-items-center p-3 mb-2 border rounded bg-white">
+                    <div class="lesson-order me-3 text-muted fw-bold" style="width: 30px;">
+                      {{ index + 1 }}
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                      <h6 class="mb-1 text-truncate">{{ element.title }}</h6>
+                      <small class="text-muted">{{ element.duration || 0 }} 分钟 · {{ element.content_type || '视频' }}</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <el-button size="small" @click="openLessonDialog(element, index)">
+                        <el-icon><Edit /></el-icon>
+                      </el-button>
+                      <el-button size="small" type="danger" plain @click="deleteLesson(index)">
+                        <el-icon><Delete /></el-icon>
+                      </el-button>
+                    </div>
                   </div>
-                  <div class="flex-grow-1 min-w-0">
-                    <h6 class="mb-1 text-truncate">{{ item.title }}</h6>
-                    <small class="text-muted">{{ item.duration || 0 }} 分钟 · {{ item.content_type || '视频' }}</small>
-                  </div>
-                  <div class="d-flex gap-2">
-                    <el-button size="small" @click="openLessonDialog(item, index)">
-                      <el-icon><Edit /></el-icon>
-                    </el-button>
-                    <el-button size="small" type="danger" plain @click="deleteLesson(index)">
-                      <el-icon><Delete /></el-icon>
-                    </el-button>
-                  </div>
-                </div>
-              </draggable-list>
+                </template>
+              </VueDraggable>
             </el-tab-pane>
 
             <el-tab-pane label="作业管理" name="assignments">
@@ -230,6 +232,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { courseApi, assignmentApi, uploadApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Check, Plus, Edit, Delete } from '@element-plus/icons-vue'
+import VueDraggable from 'vuedraggable'
 
 const route = useRoute()
 const router = useRouter()

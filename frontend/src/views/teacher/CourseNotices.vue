@@ -9,7 +9,7 @@
       </div>
 
       <div class="row mb-4">
-        <div class="col-lg-4 col-md-6">
+        <div class="col-12">
           <el-select
             v-model="selectedCourse"
             placeholder="选择课程"
@@ -26,7 +26,7 @@
             />
           </el-select>
         </div>
-        <div class="col-lg-4 col-md-6 mt-2 mt-md-0">
+        <div class="col-12 mt-2">
           <el-input
             v-model="searchQuery"
             placeholder="搜索公告标题..."
@@ -50,7 +50,8 @@
           </div>
 
           <div v-else>
-            <el-table :data="paginatedNotices" stripe border>
+            <!-- 桌面端表格 -->
+            <el-table :data="paginatedNotices" stripe border class="d-none d-md-block">
               <el-table-column prop="title" label="公告标题" min-width="200" show-overflow-tooltip />
               <el-table-column label="内容预览" min-width="300">
                 <template #default="{ row }">
@@ -71,6 +72,23 @@
                 </template>
               </el-table-column>
             </el-table>
+            
+            <!-- 移动端卡片 -->
+            <div class="d-md-none">
+              <div v-for="item in paginatedNotices" :key="item.id" class="mb-3">
+                <el-card shadow="hover">
+                  <h6 class="mb-1">{{ item.title }}</h6>
+                  <p class="small text-muted mb-2 text-truncate-2">{{ item.content }}</p>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">{{ formatDate(item.created_at) }}</small>
+                    <div class="d-flex gap-2">
+                      <el-button size="small" @click="viewNotice(item)">查看</el-button>
+                      <el-button size="small" type="danger" plain @click="deleteNotice(item)">删除</el-button>
+                    </div>
+                  </div>
+                </el-card>
+              </div>
+            </div>
           </div>
 
           <div class="d-flex justify-content-center mt-4" v-if="filteredNotices.length > pageSize">

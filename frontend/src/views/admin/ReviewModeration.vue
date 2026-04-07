@@ -35,16 +35,16 @@
       <el-tabs v-model="activeTab" type="border-card">
         <!-- 课程评价审核 -->
         <el-tab-pane label="课程评价" name="reviews">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <el-select v-model="reviewStatus" placeholder="状态筛选" clearable size="small" style="width: 150px;">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 review-mod-header">
+            <el-select v-model="reviewStatus" placeholder="状态筛选" clearable size="small" class="review-mod-select">
               <el-option label="待审核" value="pending" />
               <el-option label="已通过" value="approved" />
               <el-option label="已拒绝" value="rejected" />
             </el-select>
-            <el-button type="danger" size="small" @click="handleDeleteAllApproved('review')">删除全部已通过</el-button>
+            <el-button type="danger" size="small" class="review-mod-btn" @click="handleDeleteAllApproved('review')">删除全部已通过</el-button>
           </div>
           
-          <el-table :data="reviews" stripe border v-loading="reviewsLoading">
+          <el-table :data="reviews" stripe border v-loading="reviewsLoading" class="d-none d-md-block">
             <el-table-column prop="user_name" label="用户" width="100" />
             <el-table-column prop="course_title" label="课程" min-width="150" show-overflow-tooltip />
             <el-table-column label="评分" width="80" align="center">
@@ -67,6 +67,33 @@
             </el-table-column>
           </el-table>
           
+          <!-- 移动端评价卡片 -->
+          <div class="d-md-none">
+            <div v-if="reviews.length === 0 && !reviewsLoading" class="text-center py-4">
+              <el-empty description="暂无数据" :image-size="80" />
+            </div>
+            <div v-else v-loading="reviewsLoading">
+              <div v-for="item in reviews" :key="item.id" class="mb-3">
+                <el-card shadow="hover">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h6 class="mb-0">{{ item.user_name }}</h6>
+                      <small class="text-muted">{{ item.course_title }}</small>
+                    </div>
+                    <el-tag :type="getStatusType(item.status)" size="small">{{ getStatusText(item.status) }}</el-tag>
+                  </div>
+                  <div class="mb-2">{{ '⭐'.repeat(item.rating) }}</div>
+                  <p class="small text-muted mb-2 text-truncate-2">{{ item.content }}</p>
+                  <div class="d-flex gap-2 flex-wrap">
+                    <el-button v-if="item.status === 'pending'" type="success" size="small" class="flex-grow-1" @click="handleApprove('review', item.id)">通过</el-button>
+                    <el-button v-if="item.status === 'pending'" type="warning" size="small" class="flex-grow-1" @click="handleReject('review', item.id)">拒绝</el-button>
+                    <el-button type="danger" size="small" class="flex-grow-1" @click="handleDelete('review', item.id)">删除</el-button>
+                  </div>
+                </el-card>
+              </div>
+            </div>
+          </div>
+          
           <div class="d-flex justify-content-center mt-3">
             <el-pagination v-model:current-page="reviewPage" :page-size="20" :total="reviewTotal" layout="prev, pager, next" background />
           </div>
@@ -74,16 +101,16 @@
 
         <!-- 提问审核 -->
         <el-tab-pane label="提问" name="questions">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <el-select v-model="questionStatus" placeholder="状态筛选" clearable size="small" style="width: 150px;">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 review-mod-header">
+            <el-select v-model="questionStatus" placeholder="状态筛选" clearable size="small" class="review-mod-select">
               <el-option label="待审核" value="pending" />
               <el-option label="已通过" value="approved" />
               <el-option label="已拒绝" value="rejected" />
             </el-select>
-            <el-button type="danger" size="small" @click="handleDeleteAllApproved('question')">删除全部已通过</el-button>
+            <el-button type="danger" size="small" class="review-mod-btn" @click="handleDeleteAllApproved('question')">删除全部已通过</el-button>
           </div>
           
-          <el-table :data="questions" stripe border v-loading="questionsLoading">
+          <el-table :data="questions" stripe border v-loading="questionsLoading" class="d-none d-md-block">
             <el-table-column prop="user_name" label="用户" width="100" />
             <el-table-column prop="course_title" label="课程" min-width="150" show-overflow-tooltip />
             <el-table-column prop="title" label="标题" min-width="150" show-overflow-tooltip />
@@ -102,6 +129,32 @@
             </el-table-column>
           </el-table>
           
+          <!-- 移动端提问卡片 -->
+          <div class="d-md-none">
+            <div v-if="questions.length === 0 && !questionsLoading" class="text-center py-4">
+              <el-empty description="暂无数据" :image-size="80" />
+            </div>
+            <div v-else v-loading="questionsLoading">
+              <div v-for="item in questions" :key="item.id" class="mb-3">
+                <el-card shadow="hover">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="flex-grow-1 me-2">
+                      <h6 class="mb-0 text-truncate">{{ item.title }}</h6>
+                      <small class="text-muted">{{ item.user_name }} · {{ item.course_title }}</small>
+                    </div>
+                    <el-tag :type="getStatusType(item.status)" size="small">{{ getStatusText(item.status) }}</el-tag>
+                  </div>
+                  <p class="small text-muted mb-2 text-truncate-2">{{ item.content }}</p>
+                  <div class="d-flex gap-2 flex-wrap">
+                    <el-button v-if="item.status === 'pending'" type="success" size="small" class="flex-grow-1" @click="handleApprove('question', item.id)">通过</el-button>
+                    <el-button v-if="item.status === 'pending'" type="warning" size="small" class="flex-grow-1" @click="handleReject('question', item.id)">拒绝</el-button>
+                    <el-button type="danger" size="small" class="flex-grow-1" @click="handleDelete('question', item.id)">删除</el-button>
+                  </div>
+                </el-card>
+              </div>
+            </div>
+          </div>
+          
           <div class="d-flex justify-content-center mt-3">
             <el-pagination v-model:current-page="questionPage" :page-size="20" :total="questionTotal" layout="prev, pager, next" background />
           </div>
@@ -109,16 +162,16 @@
 
         <!-- 回答审核 -->
         <el-tab-pane label="回答" name="answers">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <el-select v-model="answerStatus" placeholder="状态筛选" clearable size="small" style="width: 150px;">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 review-mod-header">
+            <el-select v-model="answerStatus" placeholder="状态筛选" clearable size="small" class="review-mod-select">
               <el-option label="待审核" value="pending" />
               <el-option label="已通过" value="approved" />
               <el-option label="已拒绝" value="rejected" />
             </el-select>
-            <el-button type="danger" size="small" @click="handleDeleteAllApproved('answer')">删除全部已通过</el-button>
+            <el-button type="danger" size="small" class="review-mod-btn" @click="handleDeleteAllApproved('answer')">删除全部已通过</el-button>
           </div>
           
-          <el-table :data="answers" stripe border v-loading="answersLoading">
+          <el-table :data="answers" stripe border v-loading="answersLoading" class="d-none d-md-block">
             <el-table-column prop="user_name" label="用户" width="100" />
             <el-table-column prop="course_title" label="课程" min-width="120" show-overflow-tooltip />
             <el-table-column prop="question_title" label="问题" min-width="150" show-overflow-tooltip />
@@ -137,6 +190,33 @@
             </el-table-column>
           </el-table>
           
+          <!-- 移动端回答卡片 -->
+          <div class="d-md-none">
+            <div v-if="answers.length === 0 && !answersLoading" class="text-center py-4">
+              <el-empty description="暂无数据" :image-size="80" />
+            </div>
+            <div v-else v-loading="answersLoading">
+              <div v-for="item in answers" :key="item.id" class="mb-3">
+                <el-card shadow="hover">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="flex-grow-1 me-2">
+                      <h6 class="mb-0 text-truncate">{{ item.user_name }}</h6>
+                      <small class="text-muted">{{ item.course_title }}</small>
+                    </div>
+                    <el-tag :type="getStatusType(item.status)" size="small">{{ getStatusText(item.status) }}</el-tag>
+                  </div>
+                  <p class="small text-primary mb-1 text-truncate">Q: {{ item.question_title }}</p>
+                  <p class="small text-muted mb-2 text-truncate-2">{{ item.content }}</p>
+                  <div class="d-flex gap-2 flex-wrap">
+                    <el-button v-if="item.status === 'pending'" type="success" size="small" class="flex-grow-1" @click="handleApprove('answer', item.id)">通过</el-button>
+                    <el-button v-if="item.status === 'pending'" type="warning" size="small" class="flex-grow-1" @click="handleReject('answer', item.id)">拒绝</el-button>
+                    <el-button type="danger" size="small" class="flex-grow-1" @click="handleDelete('answer', item.id)">删除</el-button>
+                  </div>
+                </el-card>
+              </div>
+            </div>
+          </div>
+          
           <div class="d-flex justify-content-center mt-3">
             <el-pagination v-model:current-page="answerPage" :page-size="20" :total="answerTotal" layout="prev, pager, next" background />
           </div>
@@ -144,16 +224,16 @@
 
         <!-- 讨论审核 -->
         <el-tab-pane label="讨论" name="discussions">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <el-select v-model="discussionStatus" placeholder="状态筛选" clearable size="small" style="width: 150px;">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 review-mod-header">
+            <el-select v-model="discussionStatus" placeholder="状态筛选" clearable size="small" class="review-mod-select">
               <el-option label="待审核" value="pending" />
               <el-option label="已通过" value="approved" />
               <el-option label="已拒绝" value="rejected" />
             </el-select>
-            <el-button type="danger" size="small" @click="handleDeleteAllApproved('discussion')">删除全部已通过</el-button>
+            <el-button type="danger" size="small" class="review-mod-btn" @click="handleDeleteAllApproved('discussion')">删除全部已通过</el-button>
           </div>
           
-          <el-table :data="discussions" stripe border v-loading="discussionsLoading">
+          <el-table :data="discussions" stripe border v-loading="discussionsLoading" class="d-none d-md-block">
             <el-table-column prop="user_name" label="用户" width="100" />
             <el-table-column prop="course_title" label="课程" min-width="150" show-overflow-tooltip />
             <el-table-column prop="content" label="内容" min-width="250" show-overflow-tooltip />
@@ -170,6 +250,32 @@
               </template>
             </el-table-column>
           </el-table>
+          
+          <!-- 移动端讨论卡片 -->
+          <div class="d-md-none">
+            <div v-if="discussions.length === 0 && !discussionsLoading" class="text-center py-4">
+              <el-empty description="暂无数据" :image-size="80" />
+            </div>
+            <div v-else v-loading="discussionsLoading">
+              <div v-for="item in discussions" :key="item.id" class="mb-3">
+                <el-card shadow="hover">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="flex-grow-1 me-2">
+                      <h6 class="mb-0">{{ item.user_name }}</h6>
+                      <small class="text-muted">{{ item.course_title }}</small>
+                    </div>
+                    <el-tag :type="getStatusType(item.status)" size="small">{{ getStatusText(item.status) }}</el-tag>
+                  </div>
+                  <p class="small text-muted mb-2 text-truncate-3">{{ item.content }}</p>
+                  <div class="d-flex gap-2 flex-wrap">
+                    <el-button v-if="item.status === 'pending'" type="success" size="small" class="flex-grow-1" @click="handleApprove('discussion', item.id)">通过</el-button>
+                    <el-button v-if="item.status === 'pending'" type="warning" size="small" class="flex-grow-1" @click="handleReject('discussion', item.id)">拒绝</el-button>
+                    <el-button type="danger" size="small" class="flex-grow-1" @click="handleDelete('discussion', item.id)">删除</el-button>
+                  </div>
+                </el-card>
+              </div>
+            </div>
+          </div>
           
           <div class="d-flex justify-content-center mt-3">
             <el-pagination v-model:current-page="discussionPage" :page-size="20" :total="discussionTotal" layout="prev, pager, next" background />
@@ -277,4 +383,35 @@ onMounted(() => { fetchStatistics(); fetchReviews(); fetchQuestions(); fetchAnsw
 <style scoped>
 .stat-card { cursor: pointer; transition: transform 0.3s; }
 .stat-card:hover { transform: translateY(-4px); }
+
+/* 审核管理头部按钮适配 */
+.review-mod-header {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-mod-select {
+  width: 100%;
+  max-width: 200px;
+}
+
+@media (max-width: 768px) {
+  .review-mod-select {
+    max-width: 100%;
+  }
+  
+  .review-mod-btn {
+    width: 100%;
+  }
+  
+  /* 移动端按钮组换行 */
+  .d-flex.gap-2.flex-wrap {
+    flex-wrap: wrap;
+  }
+  
+  .d-flex.gap-2.flex-wrap .el-button {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+  }
+}
 </style>

@@ -8,92 +8,136 @@
         </el-button>
       </div>
 
-      <div class="row mb-4">
-        <div class="col-lg-4 col-md-6">
-          <el-input
-            v-model="searchQuery"
-            placeholder="搜索作业..."
-            :prefix-icon="Search"
-            clearable
-            size="large"
-          />
-        </div>
-        <div class="col-lg-3 col-md-6 mt-2 mt-md-0">
-          <el-select v-model="courseFilter" placeholder="所属课程" clearable size="large" class="w-100">
-            <el-option v-for="c in courses" :key="c.id" :label="c.title" :value="c.id" />
-          </el-select>
-        </div>
-        <div class="col-lg-3 col-md-6 mt-2 mt-md-0">
-          <el-select v-model="statusFilter" placeholder="状态" clearable size="large" class="w-100">
-            <el-option label="已过期" value="expired" />
-            <el-option label="进行中" value="active" />
-          </el-select>
-        </div>
-      </div>
-
-      <el-skeleton :loading="loading" animated :rows="6">
-        <template #default>
-          <div v-if="filteredAssignments.length === 0 && !loading" class="text-center py-5">
-            <el-empty description="暂无作业">
-              <el-button type="primary" @click="openCreateDialog">创建第一个作业</el-button>
-            </el-empty>
+          <div class="row mb-4">
+            <div class="col-12">
+              <el-input
+                v-model="searchQuery"
+                placeholder="搜索作业..."
+                :prefix-icon="Search"
+                clearable
+                size="large"
+              />
+            </div>
+            <div class="col-6 mt-2">
+              <el-select v-model="courseFilter" placeholder="所属课程" clearable size="large" class="w-100">
+                <el-option v-for="c in courses" :key="c.id" :label="c.title" :value="c.id" />
+              </el-select>
+            </div>
+            <div class="col-6 mt-2">
+              <el-select v-model="statusFilter" placeholder="状态" clearable size="large" class="w-100">
+                <el-option label="已过期" value="expired" />
+                <el-option label="进行中" value="active" />
+              </el-select>
+            </div>
           </div>
 
-          <el-table v-else :data="paginatedAssignments" stripe border>
-            <el-table-column label="作业名称" min-width="220" show-overflow-tooltip>
-              <template #default="{ row }">
-                <div>
-                  <span class="fw-medium">{{ row.title }}</span>
+          <el-skeleton :loading="loading" animated :rows="6">
+            <template #default>
+              <div v-if="filteredAssignments.length === 0 && !loading" class="text-center py-5">
+                <el-empty description="暂无作业">
+                  <el-button type="primary" @click="openCreateDialog">创建第一个作业</el-button>
+                </el-empty>
+              </div>
+
+              <!-- 桌面端表格视图 -->
+              <el-table v-else :data="paginatedAssignments" stripe border class="d-none d-md-block">
+                <el-table-column label="作业名称" min-width="220" show-overflow-tooltip>
+                  <template #default="{ row }">
+                    <div>
+                      <span class="fw-medium">{{ row.title }}</span>
+                    </div>
+                    <small class="text-muted">{{ row.course_title || getCourseName(row.course_id) }}</small>
+                  </template>
+                </el-table-column>
+                <el-table-column label="所属课程" width="160" show-overflow-tooltip>
+                  <template #default="{ row }">
+                    {{ row.course_title || getCourseName(row.course_id) }}
+                  </template>
+                </el-table-column>
+                <el-table-column label="截止时间" width="170" align="center">
+                  <template #default="{ row }">
+                    <span :class="{ 'text-danger': isExpired(row.due_date) }">
+                      {{ formatDate(row.due_date) }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="满分" width="80" align="center">
+                  <template #default="{ row }">
+                    {{ row.max_score || 100 }}
+                  </template>
+                </el-table-column>
+                <el-table-column label="提交数" width="90" align="center">
+                  <template #default="{ row }">
+                    <el-badge :value="row.submission_count || 0" :max="99" type="primary" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="待批改" width="90" align="center">
+                  <template #default="{ row }">
+                    <el-badge :value="row.pending_count || 0" :max="99" :type="row.pending_count > 0 ? 'warning' : 'info'" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="状态" width="90" align="center">
+                  <template #default="{ row }">
+                    <el-tag :type="isExpired(row.due_date) ? 'info' : 'success'" size="small">
+                      {{ isExpired(row.due_date) ? '已过期' : '进行中' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="220" align="center">
+                  <template #default="{ row }">
+                    <el-button size="small" @click="viewSubmissions(row)">查看提交</el-button>
+                    <el-button size="small" type="primary" plain @click="openEditDialog(row)">
+                      <el-icon><Edit /></el-icon>
+                    </el-button>
+                    <el-button size="small" type="danger" plain @click="deleteAssignment(row)">
+                      <el-icon><Delete /></el-icon>
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+
+              <!-- 移动端卡片列表视图 -->
+              <div class="d-md-none">
+                <div v-for="assignment in paginatedAssignments" :key="assignment.id" class="mb-3">
+                  <el-card shadow="hover">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <h6 class="mb-0 fw-bold flex-grow-1 me-2">{{ assignment.title }}</h6>
+                      <el-tag :type="isExpired(assignment.due_date) ? 'info' : 'success'" size="small">
+                        {{ isExpired(assignment.due_date) ? '已过期' : '进行中' }}
+                      </el-tag>
+                    </div>
+                    <p class="text-muted small mb-2">
+                      <el-icon class="me-1"><Reading /></el-icon>
+                      {{ assignment.course_title || getCourseName(assignment.course_id) }}
+                    </p>
+                    <p class="small mb-2" :class="{ 'text-danger': isExpired(assignment.due_date) }">
+                      <el-icon class="me-1"><Clock /></el-icon>
+                      截止: {{ formatDate(assignment.due_date) }}
+                    </p>
+                    <div class="row text-center mb-3 small">
+                      <div class="col-4">
+                        <div class="fw-bold text-dark">{{ assignment.max_score || 100 }}</div>
+                        满分
+                      </div>
+                      <div class="col-4">
+                        <div class="fw-bold text-primary">{{ assignment.submission_count || 0 }}</div>
+                        提交
+                      </div>
+                      <div class="col-4">
+                        <div class="fw-bold" :class="assignment.pending_count > 0 ? 'text-warning' : 'text-muted'">
+                          {{ assignment.pending_count || 0 }}
+                        </div>
+                        待批改
+                      </div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                      <el-button size="small" type="primary" class="flex-grow-1" @click="viewSubmissions(assignment)">查看提交</el-button>
+                      <el-button size="small" type="info" class="flex-grow-1" @click="openEditDialog(assignment)">编辑</el-button>
+                      <el-button size="small" type="danger" class="flex-grow-1" @click="deleteAssignment(assignment)">删除</el-button>
+                    </div>
+                  </el-card>
                 </div>
-                <small class="text-muted">{{ row.course_title || getCourseName(row.course_id) }}</small>
-              </template>
-            </el-table-column>
-            <el-table-column label="所属课程" width="160" show-overflow-tooltip>
-              <template #default="{ row }">
-                {{ row.course_title || getCourseName(row.course_id) }}
-              </template>
-            </el-table-column>
-            <el-table-column label="截止时间" width="170" align="center">
-              <template #default="{ row }">
-                <span :class="{ 'text-danger': isExpired(row.due_date) }">
-                  {{ formatDate(row.due_date) }}
-                </span>
-              </template>
-            </el-table-column>
-            <el-table-column label="满分" width="80" align="center">
-              <template #default="{ row }">
-                {{ row.max_score || 100 }}
-              </template>
-            </el-table-column>
-            <el-table-column label="提交数" width="90" align="center">
-              <template #default="{ row }">
-                <el-badge :value="row.submission_count || 0" :max="99" type="primary" />
-              </template>
-            </el-table-column>
-            <el-table-column label="待批改" width="90" align="center">
-              <template #default="{ row }">
-                <el-badge :value="row.pending_count || 0" :max="99" :type="row.pending_count > 0 ? 'warning' : 'info'" />
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="90" align="center">
-              <template #default="{ row }">
-                <el-tag :type="isExpired(row.due_date) ? 'info' : 'success'" size="small">
-                  {{ isExpired(row.due_date) ? '已过期' : '进行中' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="220" align="center">
-              <template #default="{ row }">
-                <el-button size="small" @click="viewSubmissions(row)">查看提交</el-button>
-                <el-button size="small" type="primary" plain @click="openEditDialog(row)">
-                  <el-icon><Edit /></el-icon>
-                </el-button>
-                <el-button size="small" type="danger" plain @click="deleteAssignment(row)">
-                  <el-icon><Delete /></el-icon>
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+              </div>
 
           <div class="d-flex justify-content-center mt-4" v-if="filteredAssignments.length > pageSize">
             <el-pagination

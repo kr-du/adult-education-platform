@@ -190,47 +190,45 @@ def delete_course(course_id):
     if user.role != 'admin' and course.teacher_id != user.id:
         return jsonify({'error': '无权限'}), 403
 
-    # 删除相关的报名记录
-    Enrollment.query.filter_by(course_id=course_id).delete()
+    try:
+        # 使用 synchronize_session=False 避免 SQLAlchemy 会话状态冲突
+        Enrollment.query.filter_by(course_id=course_id).delete(synchronize_session=False)
+        
+        # 删除课时进度
+        lesson_ids = [l.id for l in Lesson.query.filter_by(course_id=course_id).all()]
+        if lesson_ids:
+            LessonProgress.query.filter(LessonProgress.lesson_id.in_(lesson_ids)).delete(synchronize_session=False)
+        
+        Lesson.query.filter_by(course_id=course_id).delete(synchronize_session=False)
+        
+        from app.models.interaction import Review, Question, Answer, CourseNotice
+        from app.models.assignment import Assignment, Submission
+        from app.models.announcement import Discussion
 
-    # 删除相关的课时进度记录
-    lessons = Lesson.query.filter_by(course_id=course_id).all()
-    for lesson in lessons:
-        LessonProgress.query.filter_by(lesson_id=lesson.id).delete()
+        Review.query.filter_by(course_id=course_id).delete(synchronize_session=False)
+        Discussion.query.filter_by(course_id=course_id).delete(synchronize_session=False)
+        CourseNotice.query.filter_by(course_id=course_id).delete(synchronize_session=False)
+        
+        # 删除答疑回答和问题
+        question_ids = [q.id for q in Question.query.filter_by(course_id=course_id).all()]
+        if question_ids:
+            Answer.query.filter(Answer.question_id.in_(question_ids)).delete(synchronize_session=False)
+        Question.query.filter_by(course_id=course_id).delete(synchronize_session=False)
+        
+        # 删除作业和提交
+        assignment_ids = [a.id for a in Assignment.query.filter_by(course_id=course_id).all()]
+        if assignment_ids:
+            Submission.query.filter(Submission.assignment_id.in_(assignment_ids)).delete(synchronize_session=False)
+        Assignment.query.filter_by(course_id=course_id).delete(synchronize_session=False)
 
-    # 删除相关的课时
-    Lesson.query.filter_by(course_id=course_id).delete()
-
-    # 删除相关的评价记录
-    from app.models.interaction import Review, Question, Answer, CourseNotice
-    from app.models.assignment import Assignment, Submission
-    from app.models.announcement import Discussion
-
-    Review.query.filter_by(course_id=course_id).delete()
-
-    # 删除相关的讨论记录
-    Discussion.query.filter_by(course_id=course_id).delete()
-
-    # 删除相关的答疑问题和回答
-    questions = Question.query.filter_by(course_id=course_id).all()
-    for question in questions:
-        Answer.query.filter_by(question_id=question.id).delete()
-    Question.query.filter_by(course_id=course_id).delete()
-
-    # 删除相关的课程公告
-    CourseNotice.query.filter_by(course_id=course_id).delete()
-
-    # 删除相关的作业和提交记录
-    assignments = Assignment.query.filter_by(course_id=course_id).all()
-    for assignment in assignments:
-        Submission.query.filter_by(assignment_id=assignment.id).delete()
-    Assignment.query.filter_by(course_id=course_id).delete()
-
-    # 删除课程
-    db.session.delete(course)
-    db.session.commit()
-
-    return jsonify({'message': '课程删除成功'})
+        # 删除课程本身
+        db.session.delete(course)
+        db.session.commit()
+        return jsonify({'message': '课程删除成功'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'删除失败: {str(e)}'}), 500
 
 
 @courses_bp.route('/<int:course_id>/lessons', methods=['POST'])

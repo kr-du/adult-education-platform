@@ -6,7 +6,7 @@
       </h2>
 
       <div class="row mb-4">
-        <div class="col-md-4">
+        <div class="col-12">
           <el-select v-model="statusFilter" placeholder="筛选状态" size="large" class="w-100">
             <el-option label="全部" value="all" />
             <el-option label="待提交" value="pending" />

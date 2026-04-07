@@ -91,7 +91,7 @@
                   </div>
                 </el-form-item>
 
-                <el-button type="primary" :loading="loading" @click="handleSave">保存修改</el-button>
+                <el-button type="primary" :loading="loading" @click="handleSave" class="w-100">保存修改</el-button>
               </el-form>
             </div>
           </div>

@@ -39,7 +39,8 @@
     </div>
 
     <div class="table-card">
-      <el-table :data="users" stripe v-loading="loading" class="admin-table">
+      <!-- 桌面端表格视图 -->
+      <el-table :data="users" stripe v-loading="loading" class="admin-table d-none d-md-block">
         <el-table-column label="用户名" min-width="150">
           <template #default="{ row }">
             <div class="user-cell">
@@ -83,6 +84,48 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 移动端卡片列表视图 -->
+      <div class="d-md-none" v-loading="loading">
+        <div v-if="users.length === 0" class="text-center py-5">
+          <el-empty description="暂无用户数据" />
+        </div>
+        <div v-else v-for="user in users" :key="user.id" class="mb-3">
+          <el-card shadow="hover">
+            <div class="d-flex align-items-center mb-2">
+              <el-avatar :size="40" class="me-2 user-avatar">
+                {{ user.username?.charAt(0)?.toUpperCase() }}
+              </el-avatar>
+              <div class="min-w-0 flex-grow-1">
+                <h6 class="mb-0 text-truncate">{{ user.username }}</h6>
+                <small class="text-muted text-truncate d-block">{{ user.email }}</small>
+              </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="d-flex gap-2">
+                <el-tag :type="getRoleTagType(user.role)" size="small" effect="light" round>
+                  {{ getRoleLabel(user.role) }}
+                </el-tag>
+                <el-tag :type="getStatusTagType(user.status)" size="small" effect="light" round>
+                  {{ getStatusLabel(user.status) }}
+                </el-tag>
+              </div>
+              <small class="text-muted">{{ formatDate(user.created_at) }}</small>
+            </div>
+            <div class="d-flex gap-2 mt-2">
+              <el-button type="primary" size="small" class="flex-grow-1" @click="openEditDialog(user)">编辑</el-button>
+              <el-button
+                v-if="user.status === 'pending'"
+                type="success"
+                size="small"
+                class="flex-grow-1"
+                @click="handleApprove(user)"
+              >通过</el-button>
+              <el-button type="danger" size="small" class="flex-grow-1" @click="handleDelete(user)">删除</el-button>
+            </div>
+          </el-card>
+        </div>
+      </div>
 
       <div class="pagination-wrap">
         <el-pagination
@@ -410,8 +453,32 @@ onMounted(() => {
 .w-100 { width: 100%; }
 
 @media (max-width: 768px) {
-  .filter-input, .filter-select { width: 100%; }
-  .filter-row { flex-direction: column; }
-  .page-header { flex-direction: column; gap: 16px; align-items: flex-start; }
+  .admin-users { padding: 12px; }
+  
+  .page-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start !important;
+    padding: 16px;
+  }
+  
+  .page-title { font-size: 18px; }
+  .page-subtitle { font-size: 13px; }
+  
+  .filter-card { padding: 12px; }
+  .filter-input, .filter-select { width: 100% !important; }
+  .filter-row { flex-direction: column; gap: 8px; }
+  
+  .table-card { padding: 12px; }
+  
+  .pagination-wrap {
+    justify-content: center;
+    padding-top: 12px;
+    margin-top: 12px;
+  }
+  
+  .el-pagination__total, .el-pagination__jump { display: none; }
+  
+  .el-dialog { width: 95% !important; margin: 10vh auto !important; }
 }
 </style>

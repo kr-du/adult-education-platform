@@ -144,11 +144,14 @@
                   </div>
                   <el-progress :percentage="student.progress || 0" :stroke-width="6" :color="getProgressColor(student.progress)" />
                 </div>
-                <div class="d-flex justify-content-between text-muted small">
+                <div class="d-flex justify-content-between text-muted small mb-2">
                   <span>完成 {{ student.completed_lessons || 0 }}/{{ student.total_lessons || 0 }} 课时</span>
                   <span v-if="student.avg_score != null" :class="getScoreClass(student.avg_score)" class="fw-bold">
                     平均 {{ student.avg_score }} 分
                   </span>
+                </div>
+                <div class="text-end">
+                  <el-button size="small" type="primary" @click="viewStudentDetail(student)">查看详情</el-button>
                 </div>
               </el-card>
             </div>
@@ -441,15 +444,33 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   /* 手机适配 */
+  .teacher-students { padding: 12px 0 !important; }
+  .teacher-students h2 { font-size: 20px; margin-bottom: 16px !important; }
+  
   .el-card { margin-bottom: 12px; }
-  .el-table { font-size: 12px; }
+  .el-table { display: none; }
   .d-flex { flex-wrap: wrap; }
-  .el-dialog { width: 95% !important; }
+  .el-dialog { width: 95% !important; margin: 10vh auto !important; }
   .stat-card { margin-bottom: 12px; }
+  
+  /* 筛选条件全宽 */
+  .row.mb-4 .col-lg-4,
+  .row.mb-4 .col-lg-3 { width: 100%; margin-bottom: 8px; }
+  
+  /* 统计卡片两列布局 */
+  .row.g-4.mb-4 .col-lg-3 { width: 50%; }
+  .stat-card h3 { font-size: 18px; }
+  .stat-card p { font-size: 12px; }
+  
+  /* 分页适配 */
+  .el-pagination { justify-content: center; flex-wrap: wrap; gap: 8px; }
+  .el-pagination__total, .el-pagination__jump { display: none; }
 }
 
 @media (max-width: 576px) {
   /* 小手机适配 */
   .el-card__body { padding: 12px; }
+  .stat-card h3 { font-size: 16px; }
+  .stat-card p { font-size: 11px; }
 }
 </style>

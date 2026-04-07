@@ -50,13 +50,19 @@ const showFooter = computed(() => {
 
 @media (max-width: 992px) {
   .page-content.has-navbar {
-    padding-top: 68px;
+    padding-top: 76px;
   }
 }
 
 @media (max-width: 768px) {
   .page-content.has-navbar {
-    padding-top: 60px;
+    padding-top: 76px;
+  }
+}
+
+@media (max-width: 576px) {
+  .page-content.has-navbar {
+    padding-top: 72px;
   }
 }
 </style>

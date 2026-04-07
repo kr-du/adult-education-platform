@@ -7,25 +7,22 @@
       </div>
       <div class="header-actions">
         <el-button type="primary" @click="openCreateDialog">
-          <el-icon><Plus /></el-icon>添加课程
+          <el-icon>
+            <Plus />
+          </el-icon>添加课程
         </el-button>
         <el-button type="success" @click="$router.push('/admin/categories')">
-          <el-icon><FolderOpened /></el-icon>管理分类
+          <el-icon>
+            <FolderOpened />
+          </el-icon>管理分类
         </el-button>
       </div>
     </div>
 
     <div class="filter-card">
       <div class="filter-row">
-        <el-input
-          v-model="searchQuery"
-          placeholder="搜索课程名称..."
-          :prefix-icon="Search"
-          clearable
-          class="filter-input"
-          @clear="fetchCourses"
-          @keyup.enter="fetchCourses"
-        />
+        <el-input v-model="searchQuery" placeholder="搜索课程名称..." :prefix-icon="Search" clearable class="filter-input"
+          @clear="fetchCourses" @keyup.enter="fetchCourses" />
         <el-select v-model="statusFilter" placeholder="课程状态" clearable class="filter-select" @change="fetchCourses">
           <el-option label="已发布" value="published" />
           <el-option label="草稿" value="draft" />
@@ -35,14 +32,17 @@
           <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
         </el-select>
         <el-button type="primary" @click="fetchCourses" :loading="loading">
-          <el-icon><Search /></el-icon>
+          <el-icon>
+            <Search />
+          </el-icon>
           <span>搜索</span>
         </el-button>
       </div>
     </div>
 
     <div class="table-card">
-      <el-table :data="courses" stripe v-loading="loading" class="admin-table">
+      <!-- 桌面端表格视图 -->
+      <el-table :data="courses" stripe v-loading="loading" class="admin-table d-none d-md-block">
         <el-table-column prop="title" label="课程名称" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="course-title">{{ row.title }}</span>
@@ -88,33 +88,67 @@
         <el-table-column label="操作" width="200" align="center" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" plain @click="openEditDialog(row)">编辑</el-button>
-            <el-button v-if="row.status === 'draft'" type="success" size="small" plain @click="toggleStatus(row, 'published')">发布</el-button>
-            <el-button v-if="row.status === 'published'" type="warning" size="small" plain @click="toggleStatus(row, 'draft')">下架</el-button>
+            <el-button v-if="row.status === 'draft'" type="success" size="small" plain
+              @click="toggleStatus(row, 'published')">发布</el-button>
+            <el-button v-if="row.status === 'published'" type="warning" size="small" plain
+              @click="toggleStatus(row, 'draft')">下架</el-button>
             <el-button type="danger" size="small" plain @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
 
+      <!-- 移动端卡片列表视图 -->
+      <div class="d-md-none" v-loading="loading">
+        <div v-if="courses.length === 0" class="text-center py-5">
+          <el-empty description="暂无课程数据" />
+        </div>
+        <div v-for="course in courses" :key="course.id" class="mb-3">
+          <el-card shadow="hover">
+            <div class="d-flex mb-3">
+              <img v-if="course.cover_image" :src="course.cover_image" class="rounded me-3"
+                style="width: 80px; height: 60px; object-fit: cover;">
+              <div class="flex-grow-1 min-w-0">
+                <h6 class="mb-1 text-truncate">{{ course.title }}</h6>
+                <div class="d-flex gap-2 mb-1">
+                  <el-tag size="small" :type="getStatusTagType(course.status)">
+                    {{ getStatusLabel(course.status) }}
+                  </el-tag>
+                  <span class="text-muted small">👥 {{ course.student_count || 0 }}人</span>
+                </div>
+              </div>
+            </div>
+            <div class="row text-center mb-3 small text-muted">
+              <div class="col-4">
+                <div class="fw-bold text-dark">{{ course.lesson_count || 0 }}</div>课时
+              </div>
+              <div class="col-4">
+                <div class="fw-bold text-dark">¥{{ course.price || 0 }}</div>价格
+              </div>
+              <div class="col-4">
+                <div class="fw-bold text-dark">{{ course.view_count || 0 }}</div>浏览
+              </div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+              <el-button size="small" type="primary" class="flex-grow-1" @click="openEditDialog(course)">编辑</el-button>
+              <el-button v-if="course.status === 'draft'" size="small" type="success" class="flex-grow-1"
+                @click="toggleStatus(course, 'published')">发布</el-button>
+              <el-button v-if="course.status === 'published'" size="small" type="warning" class="flex-grow-1"
+                @click="toggleStatus(course, 'draft')">下架</el-button>
+              <el-button size="small" type="danger" class="flex-grow-1" @click="handleDelete(course)">删除</el-button>
+            </div>
+          </el-card>
+        </div>
+      </div>
+
       <div class="pagination-wrap">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50]"
-          :total="totalCourses"
-          layout="total, sizes, prev, pager, next"
-          background
-          @current-change="fetchCourses"
-          @size-change="fetchCourses"
-        />
+        <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50]"
+          :total="totalCourses" layout="total, sizes, prev, pager, next" background @current-change="fetchCourses"
+          @size-change="fetchCourses" />
       </div>
     </div>
 
-    <el-dialog
-      v-model="dialogVisible"
-      :title="editingCourse ? '编辑课程' : '添加课程'"
-      width="600px"
-      :close-on-click-modal="false"
-    >
+    <el-dialog v-model="dialogVisible" :title="editingCourse ? '编辑课程' : '添加课程'" width="600px"
+      :close-on-click-modal="false">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="课程名称" prop="title">
           <el-input v-model="form.title" placeholder="请输入课程名称" />
@@ -152,16 +186,13 @@
               <el-input v-model="form.cover_image" placeholder="请输入封面图片URL" />
             </div>
             <div v-else>
-              <el-upload
-                class="cover-uploader"
-                :show-file-list="false"
-                :before-upload="beforeCoverUpload"
-                :http-request="handleCoverUpload"
-                accept="image/*"
-              >
+              <el-upload class="cover-uploader" :show-file-list="false" :before-upload="beforeCoverUpload"
+                :http-request="handleCoverUpload" accept="image/*">
                 <img v-if="form.cover_image" :src="form.cover_image" class="cover-preview" />
                 <div v-else class="cover-placeholder">
-                  <el-icon :size="24"><Plus /></el-icon>
+                  <el-icon :size="24">
+                    <Plus />
+                  </el-icon>
                   <p>点击上传封面</p>
                 </div>
               </el-upload>
@@ -296,7 +327,7 @@ async function handleCoverUpload(options) {
   }
 }
 
- // 提交表单
+// 提交表单
 async function handleSubmit() {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
@@ -337,7 +368,7 @@ async function handleSubmit() {
   }
 }
 
- // 切换课程状态
+// 切换课程状态
 async function toggleStatus(course, newStatus) {
   const label = { published: '发布', draft: '下架' }[newStatus] || '修改状态'
   try {
@@ -355,7 +386,7 @@ async function toggleStatus(course, newStatus) {
   }
 }
 
- // 删除课程
+// 删除课程
 async function handleDelete(course) {
   try {
     await ElMessageBox.confirm(`确定删除课程 "${course.title}" 吗？此操作不可恢复。`, '警告', {
@@ -372,7 +403,7 @@ async function handleDelete(course) {
   }
 }
 
- // 获取课程列表
+// 获取课程列表
 async function fetchCourses() {
   loading.value = true
   try {
@@ -390,7 +421,7 @@ async function fetchCourses() {
   }
 }
 
- // 获取课程分类列表
+// 获取课程分类列表
 async function fetchCategories() {
   try {
     const res = await courseApi.getCategories()
@@ -415,7 +446,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.page { min-height: 100%; }
+.page {
+  min-height: 100%;
+}
 
 .page-header {
   background: #fff;
@@ -441,7 +474,10 @@ onMounted(() => {
   margin: 4px 0 0 0;
 }
 
-.header-actions { display: flex; gap: 12px; }
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
 
 .filter-card {
   background: #fff;
@@ -458,8 +494,13 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.filter-input { width: 240px; }
-.filter-select { width: 160px; }
+.filter-input {
+  width: 240px;
+}
+
+.filter-select {
+  width: 160px;
+}
 
 .table-card {
   background: #fff;
@@ -547,13 +588,24 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .filter-input, .filter-select { width: 100%; }
-  .filter-row { flex-direction: column; }
+
+  .filter-input,
+  .filter-select {
+    width: 100%;
+  }
+
+  .filter-row {
+    flex-direction: column;
+  }
+
   .page-header {
     flex-direction: column;
     gap: 16px;
     align-items: flex-start;
   }
-  .header-actions { width: 100%; }
+
+  .header-actions {
+    width: 100%;
+  }
 }
 </style>

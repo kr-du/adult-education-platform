@@ -263,9 +263,9 @@ async function deleteCourse(course) {
       cancelButtonText: '取消',
       type: 'error'
     })
-    await courseApi.updateCourse(course.id, { status: 'deleted' })
-    courses.value = courses.value.filter(c => c.id !== course.id)
+    await courseApi.deleteCourse(course.id)
     ElMessage.success('删除成功')
+    await fetchCourses()
   } catch (e) {
     if (e !== 'cancel') {
       ElMessage.error('删除失败')

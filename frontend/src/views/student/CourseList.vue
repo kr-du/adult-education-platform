@@ -5,7 +5,7 @@
         <div class="col-12">
           <h2 class="fw-bold mb-3">课程浏览</h2>
           <div class="row g-3">
-            <div class="col-lg-5 col-md-6">
+            <div class="col-12">
               <el-input
                 v-model="searchQuery"
                 placeholder="搜索课程名称或讲师..."
@@ -16,7 +16,7 @@
                 @keyup.enter="handleSearch"
               />
             </div>
-            <div class="col-lg-3 col-md-4 col-6">
+            <div class="col-6">
               <el-select
                 v-model="selectedCategory"
                 placeholder="选择分类"
@@ -33,7 +33,7 @@
                 />
               </el-select>
             </div>
-            <div class="col-lg-2 col-md-2 col-6">
+            <div class="col-6">
               <el-select
                 v-model="sortBy"
                 placeholder="排序方式"
@@ -46,11 +46,6 @@
                 <el-option label="价格最低" value="price_asc" />
                 <el-option label="价格最高" value="price_desc" />
               </el-select>
-            </div>
-            <div class="col-lg-2 col-md-2">
-              <el-button type="primary" size="large" class="w-100" :icon="Search" @click="handleSearch">
-                搜索
-              </el-button>
             </div>
           </div>
         </div>

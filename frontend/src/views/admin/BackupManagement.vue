@@ -80,7 +80,7 @@
           </div>
         </template>
 
-        <el-table :data="backups" stripe border v-loading="loading">
+        <el-table :data="backups" stripe border v-loading="loading" class="d-none d-md-block">
           <el-table-column prop="filename" label="文件名" min-width="200" />
           <el-table-column label="大小" width="120">
             <template #default="{ row }">
@@ -98,6 +98,24 @@
               <el-button type="danger" size="small" @click="handleDelete(row.filename)">删除</el-button>
             </template>
           </el-table-column>
+        </el-table>
+        
+        <!-- 移动端备份卡片 -->
+        <div class="d-md-none" v-loading="loading">
+          <div v-for="item in backups" :key="item.filename" class="mb-3">
+            <el-card shadow="hover">
+              <h6 class="mb-1 text-truncate">{{ item.filename }}</h6>
+              <div class="d-flex justify-content-between text-muted small mb-2">
+                <span>{{ formatSize(item.size) }}</span>
+                <span>{{ formatDate(item.created_at) }}</span>
+              </div>
+              <div class="d-flex gap-2">
+                <el-button type="primary" size="small" class="flex-grow-1" @click="handleDownload(item.filename)">下载</el-button>
+                <el-button type="danger" size="small" class="flex-grow-1" @click="handleDelete(item.filename)">删除</el-button>
+              </div>
+            </el-card>
+          </div>
+        </div>
         </el-table>
 
         <div v-if="backups.length === 0" class="text-center py-4">

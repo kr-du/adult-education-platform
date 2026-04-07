@@ -6,7 +6,7 @@
       </div>
 
       <div class="row mb-4">
-        <div class="col-lg-4 col-md-6">
+        <div class="col-12">
           <el-select
             v-model="selectedCourse"
             placeholder="选择课程"
@@ -23,7 +23,7 @@
             />
           </el-select>
         </div>
-        <div class="col-lg-3 col-md-6 mt-2 mt-md-0">
+        <div class="col-6 mt-2">
           <el-input
             v-model="searchQuery"
             placeholder="搜索学生姓名..."
@@ -32,7 +32,7 @@
             size="large"
           />
         </div>
-        <div class="col-lg-3 col-md-6 mt-2 mt-md-0">
+        <div class="col-6 mt-2">
           <el-select v-model="progressFilter" placeholder="学习进度" clearable size="large" class="w-100">
             <el-option label="未开始" value="not_started" />
             <el-option label="学习中" value="in_progress" />
