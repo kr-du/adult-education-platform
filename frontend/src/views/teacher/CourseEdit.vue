@@ -103,7 +103,7 @@
                     </div>
                     <div class="flex-grow-1 min-w-0">
                       <h6 class="mb-1 text-truncate">{{ element.title }}</h6>
-                      <small class="text-muted">{{ element.duration || 0 }} 分钟 · {{ element.content_type || '视频' }}</small>
+                      <small class="text-muted">{{ element.duration || 0 }} 分钟 · 图文教程</small>
                     </div>
                     <div class="d-flex gap-2">
                       <el-button size="small" @click="openLessonDialog(element, index)">
@@ -162,33 +162,71 @@
       </el-skeleton>
     </div>
 
-    <el-dialog v-model="lessonDialogVisible" :title="editingLessonIndex != null ? '编辑课时' : '添加课时'" width="600px" :close-on-click-modal="false">
+    <!-- 课时编辑对话框 -->
+    <el-dialog v-model="lessonDialogVisible" :title="editingLessonIndex != null ? '编辑课时' : '添加课时'" width="900px" :close-on-click-modal="false">
       <el-form ref="lessonFormRef" :model="lessonForm" :rules="lessonRules" label-position="top">
         <el-form-item label="课时标题" prop="title">
           <el-input v-model="lessonForm.title" placeholder="请输入课时标题" />
         </el-form-item>
-        <div class="row">
-          <div class="col-md-6">
-            <el-form-item label="内容类型">
-              <el-select v-model="lessonForm.content_type" class="w-100">
-                <el-option label="视频" value="video" />
-                <el-option label="文档" value="document" />
-                <el-option label="音频" value="audio" />
-                <el-option label="图文" value="article" />
-              </el-select>
-            </el-form-item>
-          </div>
-          <div class="col-md-6">
-            <el-form-item label="时长 (分钟)">
-              <el-input-number v-model="lessonForm.duration" :min="0" :max="999" class="w-100" />
-            </el-form-item>
-          </div>
-        </div>
-        <el-form-item label="内容链接/URL">
-          <el-input v-model="lessonForm.content_url" placeholder="视频链接、文档链接等" />
+        <el-form-item label="预估阅读时长 (分钟)">
+          <el-input-number v-model="lessonForm.duration" :min="1" :max="999" class="w-100" />
         </el-form-item>
-        <el-form-item label="课时描述">
-          <el-input v-model="lessonForm.description" type="textarea" :rows="3" placeholder="课时简介" />
+        
+        <!-- Markdown 编辑器 -->
+        <el-form-item label="课时内容 (支持 Markdown 格式)">
+          <div class="markdown-editor">
+            <div class="editor-toolbar">
+              <el-button-group size="small">
+                <el-button @click="insertMarkdown('**', '**')" title="加粗">B</el-button>
+                <el-button @click="insertMarkdown('*', '*')" title="斜体"><em>I</em></el-button>
+                <el-button @click="insertMarkdown('`', '`')" title="代码">&lt;/&gt;</el-button>
+                <el-button @click="insertMarkdown('# ', '')" title="标题">H</el-button>
+                <el-button @click="insertMarkdown('- ', '')" title="列表">•</el-button>
+                <el-button @click="insertMarkdown('> ', '')" title="引用">"</el-button>
+              </el-button-group>
+              <el-button size="small" @click="showPreview = !showPreview">
+                {{ showPreview ? '编辑' : '预览' }}
+              </el-button>
+            </div>
+            <div class="editor-body" :class="{ 'split-view': showPreview }">
+              <div class="editor-pane">
+                <el-input
+                  ref="contentEditorRef"
+                  v-model="lessonForm.content"
+                  type="textarea"
+                  :rows="15"
+                  placeholder="请输入 Markdown 格式的课时内容...
+
+示例：
+# 第一章节标题
+
+这是一段正文内容，可以包含**加粗**和*斜体*文字。
+
+## 小标题
+
+- 列表项 1
+- 列表项 2
+- 列表项 3
+
+```javascript
+// 代码示例
+console.log('Hello World');
+```
+
+> 这是一段引用文字"
+                />
+              </div>
+              <div v-if="showPreview" class="preview-pane">
+                <div class="preview-label">预览</div>
+                <div class="preview-content">
+                  <ArticleReader :content="lessonForm.content" :title="lessonForm.title" />
+                </div>
+              </div>
+            </div>
+            <div class="editor-footer text-muted small mt-2">
+              支持 Markdown 语法：标题(#)、加粗(**)、斜体(*)、代码(`)、列表(-)、引用(>)、链接([]())等
+            </div>
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -197,6 +235,7 @@
       </template>
     </el-dialog>
 
+    <!-- 作业编辑对话框 -->
     <el-dialog v-model="assignmentDialogVisible" :title="editingAssignmentIndex != null ? '编辑作业' : '添加作业'" width="600px" :close-on-click-modal="false">
       <el-form ref="assignmentFormRef" :model="assignmentForm" :rules="assignmentRules" label-position="top">
         <el-form-item label="作业名称" prop="title">
@@ -233,6 +272,7 @@ import { courseApi, assignmentApi, uploadApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Check, Plus, Edit, Delete } from '@element-plus/icons-vue'
 import VueDraggable from 'vuedraggable'
+import ArticleReader from '@/components/common/ArticleReader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -265,11 +305,13 @@ const assignments = ref([])
 const lessonDialogVisible = ref(false)
 const editingLessonIndex = ref(null)
 const lessonFormRef = ref(null)
+const contentEditorRef = ref(null)
+const showPreview = ref(false)
 const lessonForm = ref({
   title: '',
-  content_type: 'video',
-  duration: 0,
-  content_url: '',
+  content_type: 'article',
+  duration: 10,
+  content: '',
   description: ''
 })
 const lessonRules = {
@@ -317,12 +359,44 @@ async function handleCoverUpload(options) {
 
 function openLessonDialog(lesson = null, index = null) {
   editingLessonIndex.value = index
+  showPreview.value = false
   if (lesson) {
-    lessonForm.value = { ...lesson }
+    lessonForm.value = {
+      title: lesson.title || '',
+      content_type: 'article',
+      duration: lesson.duration || 10,
+      content: lesson.content || '',
+      description: lesson.description || ''
+    }
   } else {
-    lessonForm.value = { title: '', content_type: 'video', duration: 0, content_url: '', description: '' }
+    lessonForm.value = {
+      title: '',
+      content_type: 'article',
+      duration: 10,
+      content: '',
+      description: ''
+    }
   }
   lessonDialogVisible.value = true
+}
+
+function insertMarkdown(before, after) {
+  const textarea = contentEditorRef.value?.textarea
+  if (!textarea) return
+
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const text = lessonForm.value.content || ''
+  const selectedText = text.substring(start, end)
+
+  const newText = text.substring(0, start) + before + selectedText + after + text.substring(end)
+  lessonForm.value.content = newText
+
+  // 恢复光标位置
+  setTimeout(() => {
+    textarea.focus()
+    textarea.setSelectionRange(start + before.length, end + before.length)
+  }, 0)
 }
 
 function handleSaveLesson() {
@@ -459,9 +533,11 @@ async function fetchData() {
           status: data.status || 'draft',
           cover_image: data.cover_image || ''
         }
-        lessons.value = data.lessons || []
+        lessons.value = (data.lessons || []).map(l => ({
+          ...l,
+          content_type: 'article'
+        }))
 
-        // 根据封面URL判断上传类型
         if (data.cover_image && !data.cover_image.startsWith('http')) {
           coverImageType.value = 'upload'
         }
@@ -504,24 +580,114 @@ onMounted(() => {
   max-height: 150px;
   object-fit: cover;
 }
+
+/* Markdown 编辑器样式 */
+.markdown-editor {
+  width: 100%;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+}
+
+.editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #dcdfe6;
+}
+
+.editor-body {
+  display: flex;
+}
+
+.editor-body.split-view .editor-pane {
+  width: 50%;
+  border-right: 1px solid #dcdfe6;
+}
+
+.editor-pane {
+  flex: 1;
+}
+
+.editor-pane :deep(.el-textarea__inner) {
+  border: none;
+  border-radius: 0;
+  resize: none;
+}
+
+.preview-pane {
+  width: 50%;
+  max-height: 400px;
+  overflow-y: auto;
+  background: #fafafa;
+}
+
+.preview-label {
+  padding: 8px 12px;
+  background: #f0f0f0;
+  font-size: 12px;
+  color: #666;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.preview-content {
+  padding: 16px;
+  font-size: 14px;
+}
+
+.preview-content :deep(.article-reader) {
+  height: auto;
+}
+
+.preview-content :deep(.article-header) {
+  display: none;
+}
+
+.preview-content :deep(.article-content) {
+  padding: 0;
+  max-height: 350px;
+}
+
+.preview-content :deep(.progress-bar-container),
+.preview-content :deep(.article-footer) {
+  display: none;
+}
+
+.editor-footer {
+  padding: 8px 12px;
+  background: #fafafa;
+  border-top: 1px solid #ebeef5;
+}
+
 /* 响应式 */
 @media (max-width: 992px) {
-  /* 平板适配 */
   .el-table { font-size: 12px; }
   .el-card { margin-bottom: 12px; }
 }
 
 @media (max-width: 768px) {
-  /* 手机适配 */
   .el-card { margin-bottom: 12px; }
   .el-table { font-size: 12px; }
   .d-flex { flex-wrap: wrap; }
   .el-dialog { width: 95% !important; }
   .el-tabs__content { padding: 12px; }
+  
+  .editor-body.split-view {
+    flex-direction: column;
+  }
+  
+  .editor-body.split-view .editor-pane,
+  .editor-body.split-view .preview-pane {
+    width: 100%;
+  }
+  
+  .preview-pane {
+    max-height: 300px;
+    border-top: 1px solid #dcdfe6;
+  }
 }
 
 @media (max-width: 576px) {
-  /* 小手机适配 */
   .el-card__body { padding: 12px; }
   .el-form-item__label { width: 100%; }
 }

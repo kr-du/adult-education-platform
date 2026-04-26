@@ -51,6 +51,7 @@ import { useUserStore } from '@/store/user'
 import { authApi } from '@/api'
 import { ElMessage } from 'element-plus'
 import { Reading } from '@element-plus/icons-vue'
+import { validateUsername, validatePassword, handleApiError } from '@/utils/security'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -64,8 +65,20 @@ const form = reactive({
 })
 
 const rules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'change' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'change' }]
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'change' },
+    { validator: (rule, value, callback) => {
+      const error = validateUsername(value)
+      callback(error)
+    }, trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'change' },
+    { validator: (rule, value, callback) => {
+      const error = validatePassword(value)
+      callback(error)
+    }, trigger: 'blur' }
+  ]
 }
 
 async function handleLogin() {
@@ -83,7 +96,7 @@ async function handleLogin() {
     else if (role === 'teacher') router.push('/teacher/dashboard')
     else router.push('/student/dashboard')
   } catch (e) {
-    ElMessage.error(e.response?.data?.error || '登录失败')
+    handleApiError(e)
   } finally {
     loading.value = false
   }

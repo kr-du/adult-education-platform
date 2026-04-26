@@ -15,8 +15,16 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '
 
 def create_app(config_name='default'):
     app = Flask(__name__)
+    
     app.config.from_object(config[config_name])
-
+    
+    try:
+        config[config_name].validate_config()
+        # print(f"数据库URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
+    except ValueError as e:
+        print(f"配置验证失败: {e}")
+        raise
+    
     db.init_app(app)
     migrate.init_app(app, db)
     CORS(app)

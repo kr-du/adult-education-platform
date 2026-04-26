@@ -6,40 +6,35 @@
       <span class="ms-2">加载中...</span>
     </div>
 
-    <!-- 视频区域 -->
-    <div class="video-area flex-grow-1 bg-dark d-flex flex-column">
-      <div class="video-header bg-dark text-white p-3 d-flex justify-content-between align-items-center">
+    <!-- 文章阅读区域 -->
+    <div class="article-area flex-grow-1 bg-light d-flex flex-column">
+      <div class="article-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center">
-          <el-button link class="text-white me-3" @click="goBack">
+          <el-button link class="me-3" @click="goBack">
             <el-icon><ArrowLeft /></el-icon>
             <span class="ms-1">返回</span>
           </el-button>
-          <h5 class="mb-0">{{ course?.title || '课程加载中...' }}</h5>
+          <h5 class="mb-0 text-truncate" style="max-width: 400px;">{{ course?.title || '课程加载中...' }}</h5>
         </div>
-        <el-button link class="text-white" @click="toggleSidebar">
+        <el-button link @click="toggleSidebar">
           <el-icon :size="20"><Fold v-if="sidebarVisible" /><Expand v-else /></el-icon>
         </el-button>
       </div>
 
-      <div class="video-container flex-grow-1 d-flex align-items-center justify-content-center bg-black">
-        <!-- 使用增强版视频播放器 -->
-        <VideoPlayer
-          v-if="currentLesson?.video_url"
-          ref="videoPlayerRef"
-          :src="currentLesson.video_url"
-          @timeupdate="handleTimeUpdate"
-          @ended="handleVideoEnd"
-          class="w-100 h-100"
+      <div class="article-container flex-grow-1">
+        <ArticleReader
+          v-if="currentLesson"
+          ref="articleReaderRef"
+          :content="currentLesson.content"
+          :title="currentLesson.title"
+          :duration="currentLesson.duration"
+          @progress-update="handleProgressUpdate"
+          @complete="handleArticleComplete"
         />
-        <div v-else class="text-white text-center">
-          <el-icon :size="48"><VideoCamera /></el-icon>
-          <p class="mt-2">暂无视频</p>
+        <div v-else class="empty-state d-flex flex-column align-items-center justify-content-center h-100">
+          <el-icon :size="64" class="text-muted"><Reading /></el-icon>
+          <p class="mt-3 text-muted">请选择一个课时开始学习</p>
         </div>
-      </div>
-
-      <div class="video-info bg-white p-3">
-        <h5 class="mb-1">{{ currentLesson?.title || '请选择课时' }}</h5>
-        <p class="text-muted mb-0 small">{{ currentLesson?.content || '点击右侧目录开始学习' }}</p>
       </div>
     </div>
 
@@ -75,7 +70,7 @@
         <!-- 课程目录 -->
         <div v-show="activeTab === 'lessons'" class="lesson-list">
           <div v-if="lessons.length === 0" class="text-center py-5 text-muted">
-            <el-icon :size="32"><VideoCamera /></el-icon>
+            <el-icon :size="32"><Document /></el-icon>
             <p class="mt-2 small">暂无课时</p>
           </div>
           <div
@@ -90,7 +85,7 @@
                 <CircleCheckFilled />
               </el-icon>
               <el-icon v-else-if="lesson.id === currentLesson?.id" class="text-primary">
-                <VideoPlay />
+                <Document />
               </el-icon>
               <span v-else>{{ index + 1 }}</span>
             </div>
@@ -292,21 +287,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { courseApi, discussionApi, interactionApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
-  Fold, Expand, CircleCheckFilled, VideoPlay, VideoCamera, 
-  Bell, User, ArrowLeft, ChatDotRound, List, Loading, CircleClose, Star 
+  Fold, Expand, CircleCheckFilled, Document,
+  Bell, User, ArrowLeft, ChatDotRound, List, Loading, Reading, Star 
 } from '@element-plus/icons-vue'
-import VideoPlayer from '@/components/common/VideoPlayer.vue'
+import ArticleReader from '@/components/common/ArticleReader.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const videoPlayerRef = ref()
+const articleReaderRef = ref()
 const course = ref(null)
 const lessons = ref([])
 const currentLesson = ref(null)
@@ -360,7 +355,6 @@ function handleApiError(error, defaultMessage = '操作失败') {
   console.error(error)
   const message = error.response?.data?.error || error.message || defaultMessage
   ElMessage.error(message)
-  // 如果是 401 未授权，跳转到登录页
   if (error.response?.status === 401) {
     userStore.logout()
     router.push('/login')
@@ -396,44 +390,36 @@ function formatDate(dateStr) {
 }
 
 async function selectLesson(lesson) {
-  // 如果点击的是当前正在播放的课时，不做任何操作
   if (currentLesson.value?.id === lesson.id) return
-  
   currentLesson.value = lesson
 }
 
-async function handleTimeUpdate({ currentTime, duration }) {
-  if (!currentLesson.value || !duration || isNaN(duration)) return
+// 处理阅读进度更新
+function handleProgressUpdate({ progress, readTime }) {
+  if (!currentLesson.value || reportedCompletedLessons.value.has(currentLesson.value.id)) return
   
-  const percent = (currentTime / duration) * 100
-
-  // 只有当进度超过 80% 且该课时未被标记为完成时才上报
-  if (percent > 80 && !reportedCompletedLessons.value.has(currentLesson.value.id)) {
-    try {
-      // 乐观更新 UI
-      updateLocalProgress(currentLesson.value.id, true)
-      
-      await courseApi.updateProgress(currentLesson.value.id, {
-        watched_duration: Math.floor(currentTime),
-        completed: true
-      })
-      
-      // 标记为已上报
-      reportedCompletedLessons.value.add(currentLesson.value.id)
-    } catch (e) {
-      // 如果失败，回滚 UI 状态
-      updateLocalProgress(currentLesson.value.id, false)
-      handleApiError(e, '进度同步失败')
-    }
+  // 进度超过 95% 时标记为完成
+  if (progress >= 95) {
+    markLessonCompleted()
   }
 }
 
-async function handleVideoEnd() {
+// 处理文章阅读完成
+function handleArticleComplete({ progress, readTime }) {
+  if (!currentLesson.value) return
+  markLessonCompleted()
+}
+
+// 标记课时完成
+async function markLessonCompleted() {
   if (!currentLesson.value || reportedCompletedLessons.value.has(currentLesson.value.id)) return
 
   try {
     updateLocalProgress(currentLesson.value.id, true)
-    await courseApi.updateProgress(currentLesson.value.id, { completed: true })
+    await courseApi.updateProgress(currentLesson.value.id, {
+      watched_duration: articleReaderRef.value?.getReadTime() || 0,
+      completed: true
+    })
     reportedCompletedLessons.value.add(currentLesson.value.id)
     ElMessage.success('课时学习完成')
   } catch (e) {
@@ -506,22 +492,18 @@ async function submitDiscussion() {
 }
 
 async function toggleReplies(item) {
-  // 如果已经展开且有数据，则收起
   if (item.showReplies) {
     item.showReplies = false
     return
   }
   
-  // 如果正在加载，直接返回
   if (item.loadingReplies) return
   
-  // 如果已经有数据，直接展开
   if (item.replies.length > 0) {
     item.showReplies = true
     return
   }
   
-  // 否则加载数据
   item.loadingReplies = true
   try {
     const res = await discussionApi.getReplies(item.id)
@@ -590,12 +572,10 @@ async function deleteReply(reply, parentItem) {
   }
 }
 
-// 获取评价列表
 async function fetchReviews() {
   try {
     const res = await interactionApi.getCourseReviews(route.params.id)
     reviews.value = res.data.reviews || []
-    // 检查当前用户是否已评价
     if (userStore.isLoggedIn) {
       hasReviewed.value = reviews.value.some(r => r.user_id === userStore.user.id)
     }
@@ -604,7 +584,6 @@ async function fetchReviews() {
   }
 }
 
-// 提交评价
 async function submitReview() {
   if (!newReview.value.content.trim()) {
     ElMessage.warning('请输入评价内容')
@@ -643,11 +622,9 @@ async function fetchLessonProgress() {
       lessonProgress.value = lessons.value.slice(0, completedCount).map(l => ({
         lesson_id: l.id, completed: true
       }))
-      // 初始化已上报集合
       reportedCompletedLessons.value = new Set(lessonProgress.value.map(p => p.lesson_id))
     }
   } catch (e) {
-    // 进度获取失败不阻塞页面渲染，仅打印日志
     console.error('获取进度失败', e)
   }
 }
@@ -658,7 +635,6 @@ onMounted(async () => {
     course.value = res.data.course
     lessons.value = res.data.lessons || []
 
-    // 并行请求不依赖的数据
     const tasks = [fetchNotices(), fetchReviews()]
     if (userStore.isLoggedIn) tasks.push(fetchDiscussions())
     
@@ -667,7 +643,6 @@ onMounted(async () => {
       ...tasks
     ])
     
-    // 默认选中第一个课时
     if (lessons.value.length > 0) {
       currentLesson.value = lessons.value[0]
     }
@@ -677,17 +652,30 @@ onMounted(async () => {
     pageLoading.value = false
   }
 })
-
-// 组件卸载时清理资源
-onUnmounted(() => {
-  if (videoPlayerRef.value) {
-    videoPlayerRef.value.pause()
-  }
-})
 </script>
 
 <style scoped>
-/* ... 保持原有样式不变 ... */
+/* 文章区域 */
+.article-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.article-header {
+  flex-shrink: 0;
+}
+
+.article-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 空状态 */
+.empty-state {
+  background: #fafafa;
+}
+
+/* 课时列表样式 */
 .lesson-item {
   cursor: pointer;
   transition: all 0.2s;
@@ -856,10 +844,6 @@ onUnmounted(() => {
   background: #faecd8;
 }
 
-.reply-item {
-  font-size: 13px;
-}
-
 /* 响应式 */
 @media (max-width: 992px) {
   .sidebar {
@@ -878,31 +862,13 @@ onUnmounted(() => {
     min-height: 100vh;
   }
   
-  .video-area {
+  .article-area {
     height: 50vh;
     min-height: 300px;
   }
   
-  .video-header {
+  .article-header {
     padding: 10px 12px;
-  }
-  
-  .video-header .title-text {
-    font-size: 14px;
-    max-width: 180px;
-  }
-  
-  .back-btn {
-    padding: 6px 10px;
-    font-size: 12px;
-  }
-  
-  .video-info {
-    padding: 12px;
-  }
-  
-  .video-info h5 {
-    font-size: 14px;
   }
   
   .sidebar {
@@ -953,7 +919,6 @@ onUnmounted(() => {
     height: 60px;
   }
   
-  /* 移动端遮罩层 */
   .sidebar-backdrop {
     position: fixed;
     top: 0;
@@ -966,7 +931,7 @@ onUnmounted(() => {
 }
 
 @media (max-width: 576px) {
-  .video-area {
+  .article-area {
     height: 45vh;
     min-height: 250px;
   }
