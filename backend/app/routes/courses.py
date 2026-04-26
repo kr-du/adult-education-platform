@@ -1,8 +1,9 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
+from flask import Blueprint, request, jsonify, current_app
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.course import Course, Category, Lesson, Enrollment, LessonProgress
 from app.models.user import User
+from app.utils.security import sanitize_search_keyword, sanitize_sort_field, handle_api_error, validate_file_upload, sanitize_filename, generate_safe_filename
 
 courses_bp = Blueprint('courses', __name__)
 
@@ -12,7 +13,32 @@ def get_current_user():
     return User.query.get(user_id)
 
 
+def handle_route_error(f):
+    """装饰器：统一处理路由错误"""
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except ValueError as e:
+            return handle_api_error(e, 400)
+        except Exception as e:
+            current_app.logger.error(f"Route error: {str(e)}", exc_info=True)
+            return handle_api_error("服务器内部错误", 500)
+    wrapper.__name__ = f.__name__
+    return wrapper
+
+
+@courses_bp.errorhandler(404)
+def not_found_error(error):
+    return handle_api_error("资源未找到", 404)
+
+
+@courses_bp.errorhandler(403)
+def forbidden_error(error):
+    return handle_api_error("无权限访问", 403)
+
+
 @courses_bp.route('/', methods=['GET'])
+@handle_route_error
 def get_courses():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 12, type=int)
@@ -34,15 +60,30 @@ def get_courses():
     if category_id:
         query = query.filter_by(category_id=category_id)
     if keyword:
-        # 同时搜索课程名称和讲师姓名
-        query = query.join(User, Course.teacher_id == User.id).filter(
-            db.or_(
-                Course.title.ilike(f'%{keyword}%'),
-                User.real_name.ilike(f'%{keyword}%')
-            )
-        )
+        try:
+            # 清理搜索关键词，防止SQL注入
+            safe_keyword = sanitize_search_keyword(keyword)
+            if safe_keyword:
+                # 同时搜索课程名称和讲师姓名
+                query = query.join(User, Course.teacher_id == User.id).filter(
+                    db.or_(
+                        Course.title.ilike(safe_keyword),
+                        User.real_name.ilike(safe_keyword)
+                    )
+                )
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid search keyword: {str(e)}")
+            # 如果关键词无效，不进行搜索，返回空结果
+            query = query.filter(db.false())
     if teacher_id:
         query = query.filter_by(teacher_id=teacher_id)
+
+    # 验证和清理排序字段
+    try:
+        sort = sanitize_sort_field(sort)
+    except ValueError as e:
+        current_app.logger.warning(f"Invalid sort field: {str(e)}")
+        sort = 'created_at'
 
     # 排序
     if sort == 'price_asc':
@@ -80,30 +121,7 @@ def get_courses():
 @courses_bp.route('/<int:course_id>', methods=['GET'])
 def get_course(course_id):
     course = Course.query.get_or_404(course_id)
-
-    # 安全获取用户：如果未登录，user 为 None
-    user = None
-    try:
-        verify_jwt_in_request(optional=True)
-        user = get_current_user()
-    except Exception:
-        pass
-
     lessons = Lesson.query.filter_by(course_id=course_id).order_by(Lesson.order).all()
-
-    # 权限校验逻辑
-    if course.status == 'draft':
-        # 草稿仅教师/管理员可见
-        if not user or (user.role not in ['teacher', 'admin'] and user.id != course.teacher_id):
-            return jsonify({'error': '课程不存在'}), 404
-    elif course.status == 'archived':
-        # 已归档仅已报名学员可见
-        if user and user.role == 'student':
-            enrollment = Enrollment.query.filter_by(user_id=user.id, course_id=course.id).first()
-            if not enrollment:
-                return jsonify({'error': '该课程已归档，仅限已报名学员访问'}), 403
-        elif not user:
-            return jsonify({'error': '课程已下架'}), 404
 
     # 增加浏览次数
     course.view_count = (course.view_count or 0) + 1
@@ -117,6 +135,7 @@ def get_course(course_id):
 
 @courses_bp.route('/', methods=['POST'])
 @jwt_required()
+@handle_route_error
 def create_course():
     user = get_current_user()
     if user.role not in ['teacher', 'admin']:
@@ -190,45 +209,47 @@ def delete_course(course_id):
     if user.role != 'admin' and course.teacher_id != user.id:
         return jsonify({'error': '无权限'}), 403
 
-    try:
-        # 使用 synchronize_session=False 避免 SQLAlchemy 会话状态冲突
-        Enrollment.query.filter_by(course_id=course_id).delete(synchronize_session=False)
-        
-        # 删除课时进度
-        lesson_ids = [l.id for l in Lesson.query.filter_by(course_id=course_id).all()]
-        if lesson_ids:
-            LessonProgress.query.filter(LessonProgress.lesson_id.in_(lesson_ids)).delete(synchronize_session=False)
-        
-        Lesson.query.filter_by(course_id=course_id).delete(synchronize_session=False)
-        
-        from app.models.interaction import Review, Question, Answer, CourseNotice
-        from app.models.assignment import Assignment, Submission
-        from app.models.announcement import Discussion
+    # 删除相关的报名记录
+    Enrollment.query.filter_by(course_id=course_id).delete()
 
-        Review.query.filter_by(course_id=course_id).delete(synchronize_session=False)
-        Discussion.query.filter_by(course_id=course_id).delete(synchronize_session=False)
-        CourseNotice.query.filter_by(course_id=course_id).delete(synchronize_session=False)
-        
-        # 删除答疑回答和问题
-        question_ids = [q.id for q in Question.query.filter_by(course_id=course_id).all()]
-        if question_ids:
-            Answer.query.filter(Answer.question_id.in_(question_ids)).delete(synchronize_session=False)
-        Question.query.filter_by(course_id=course_id).delete(synchronize_session=False)
-        
-        # 删除作业和提交
-        assignment_ids = [a.id for a in Assignment.query.filter_by(course_id=course_id).all()]
-        if assignment_ids:
-            Submission.query.filter(Submission.assignment_id.in_(assignment_ids)).delete(synchronize_session=False)
-        Assignment.query.filter_by(course_id=course_id).delete(synchronize_session=False)
+    # 删除相关的课时进度记录
+    lessons = Lesson.query.filter_by(course_id=course_id).all()
+    for lesson in lessons:
+        LessonProgress.query.filter_by(lesson_id=lesson.id).delete()
 
-        # 删除课程本身
-        db.session.delete(course)
-        db.session.commit()
-        return jsonify({'message': '课程删除成功'})
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': f'删除失败: {str(e)}'}), 500
+    # 删除相关的课时
+    Lesson.query.filter_by(course_id=course_id).delete()
+
+    # 删除相关的评价记录
+    from app.models.interaction import Review, Question, Answer, CourseNotice
+    from app.models.assignment import Assignment, Submission
+    from app.models.announcement import Discussion
+
+    Review.query.filter_by(course_id=course_id).delete()
+
+    # 删除相关的讨论记录
+    Discussion.query.filter_by(course_id=course_id).delete()
+
+    # 删除相关的答疑问题和回答
+    questions = Question.query.filter_by(course_id=course_id).all()
+    for question in questions:
+        Answer.query.filter_by(question_id=question.id).delete()
+    Question.query.filter_by(course_id=course_id).delete()
+
+    # 删除相关的课程公告
+    CourseNotice.query.filter_by(course_id=course_id).delete()
+
+    # 删除相关的作业和提交记录
+    assignments = Assignment.query.filter_by(course_id=course_id).all()
+    for assignment in assignments:
+        Submission.query.filter_by(assignment_id=assignment.id).delete()
+    Assignment.query.filter_by(course_id=course_id).delete()
+
+    # 删除课程
+    db.session.delete(course)
+    db.session.commit()
+
+    return jsonify({'message': '课程删除成功'})
 
 
 @courses_bp.route('/<int:course_id>/lessons', methods=['POST'])
@@ -262,10 +283,6 @@ def add_lesson(course_id):
 @courses_bp.route('/enroll/<int:course_id>', methods=['POST'])
 @jwt_required()
 def enroll_course(course_id):
-    course = Course.query.get_or_404(course_id)
-
-    if course.status != 'published':
-        return jsonify({'error': '该课程暂未开放报名'}), 400
     user = get_current_user()
     if user.role != 'student':
         return jsonify({'error': '只有学生可以报名'}), 403

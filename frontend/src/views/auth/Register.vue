@@ -66,6 +66,7 @@ import { useRouter } from 'vue-router'
 import { authApi } from '@/api'
 import { ElMessage } from 'element-plus'
 import { Reading } from '@element-plus/icons-vue'
+import { validateUsername, validatePassword, validateEmail, handleApiError } from '@/utils/security'
 
 const router = useRouter()
 const formRef = ref()
@@ -92,13 +93,30 @@ const validateConfirmPassword = (rule, value, callback) => {
 const rules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'change' },
-    { min: 3, max: 20, message: '用户名长度为3-20个字符', trigger: 'change' }
+    { validator: (rule, value, callback) => {
+      const error = validateUsername(value)
+      if (error) {
+        callback(new Error(error))
+      } else {
+        callback()
+      }
+    }, trigger: 'blur' }
   ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'change' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'change' }
+    { validator: (rule, value, callback) => {
+      const error = validateEmail(value)
+      if (error) {
+        callback(new Error(error))
+      } else {
+        callback()
+      }
+    }, trigger: 'blur' }
   ],
-  real_name: [{ required: true, message: '请输入真实姓名', trigger: 'change' }],
+  real_name: [
+    { required: true, message: '请输入真实姓名', trigger: 'change' },
+    { min: 2, max: 50, message: '真实姓名长度应在2-50个字符之间', trigger: 'change' }
+  ],
   phone: [
     { required: true, message: '请输入手机号', trigger: 'change' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'change' }
@@ -106,7 +124,14 @@ const rules = {
   role: [{ required: true, message: '请选择角色', trigger: 'change' }],
   password: [
     { required: true, message: '请输入密码', trigger: 'change' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'change' }
+    { validator: (rule, value, callback) => {
+      const error = validatePassword(value)
+      if (error) {
+        callback(new Error(error))
+      } else {
+        callback()
+      }
+    }, trigger: 'blur' }
   ],
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'change' },
@@ -124,7 +149,7 @@ async function handleRegister() {
     ElMessage.success('注册成功，请登录')
     router.push('/login')
   } catch (e) {
-    ElMessage.error(e.response?.data?.error || '注册失败')
+    handleApiError(e)
   } finally {
     loading.value = false
   }

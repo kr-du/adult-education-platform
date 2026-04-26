@@ -116,7 +116,6 @@
             </el-card>
           </div>
         </div>
-        </el-table>
 
         <div v-if="backups.length === 0" class="text-center py-4">
           <el-empty description="暂无备份记录" />

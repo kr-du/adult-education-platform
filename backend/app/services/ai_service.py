@@ -12,7 +12,7 @@ class AiService:
         self.client = ZhipuAI(api_key=ZHIPU_API_KEY)
 
     # 对话
-    def chat(self, messages, model="glm-4"):
+    def chat(self, messages, model="glm-4-flash"):
         """
         发送对话请求
 
@@ -36,7 +36,7 @@ class AiService:
             return f"抱歉，AI服务暂时不可用。错误信息：{str(e)}"
 
     # 流式对话
-    def chat_stream(self, messages, model="glm-4"):
+    def chat_stream(self, messages, model="glm-4-flash"):
         """
         流式对话（用于实时显示）
 
