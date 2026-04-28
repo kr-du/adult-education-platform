@@ -198,10 +198,21 @@ marked.setOptions({
 // 渲染Markdown
 function renderMarkdown(content) {
   if (!content) return ''
-  const html = marked.parse(content)
-  return DOMPurify.sanitize(html, {
-    ADD_ATTR: ['onclick', 'data-code']
-  })
+  try {
+    // 确保内容是字符串
+    const text = String(content)
+    // 使用marked.parse解析Markdown
+    const html = marked.parse(text, { breaks: true, gfm: true })
+    // 使用DOMPurify清理HTML，允许更多标签
+    return DOMPurify.sanitize(html, {
+      ADD_ATTR: ['onclick', 'data-code'],
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'div', 'span', 'img', 'hr'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'class', 'id', 'onclick', 'data-code']
+    })
+  } catch (e) {
+    console.error('Markdown渲染错误:', e)
+    return content
+  }
 }
 
 // 复制代码功能
