@@ -207,15 +207,14 @@ def chat_stream():
             yield f"data: {chunk}\n\n"
 
         # 保存完整回复
-        with db.app.app_context():
-            ai_msg = AiMessage(
-                conversation_id=conversation.id,
-                role='assistant',
-                content=''.join(full_reply)
-            )
-            db.session.add(ai_msg)
-            conversation.updated_at = db.func.now()
-            db.session.commit()
+        ai_msg = AiMessage(
+            conversation_id=conversation.id,
+            role='assistant',
+            content=''.join(full_reply)
+        )
+        db.session.add(ai_msg)
+        conversation.updated_at = db.func.now()
+        db.session.commit()
 
         yield f"data: [DONE]\n\n"
 
