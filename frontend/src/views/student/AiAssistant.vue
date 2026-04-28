@@ -685,25 +685,31 @@ onMounted(() => {
 /* Markdown样式 */
 .markdown-body {
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .markdown-body :deep(p) {
-  margin: 0;
+  margin: 0 0 6px 0;
   padding: 0;
 }
 
-.markdown-body :deep(p) + :deep(p) {
-  margin-top: 4px;
+.markdown-body :deep(p):last-child {
+  margin-bottom: 0;
 }
 
 .markdown-body :deep(h1),
 .markdown-body :deep(h2),
 .markdown-body :deep(h3),
 .markdown-body :deep(h4) {
-  margin: 6px 0 4px 0;
+  margin: 8px 0 4px 0;
   font-weight: 600;
   color: #1f2937;
+}
+
+.markdown-body :deep(h1):first-child,
+.markdown-body :deep(h2):first-child,
+.markdown-body :deep(h3):first-child {
+  margin-top: 0;
 }
 
 .markdown-body :deep(h1) { font-size: 16px; }
@@ -712,12 +718,17 @@ onMounted(() => {
 
 .markdown-body :deep(ul),
 .markdown-body :deep(ol) {
-  margin: 4px 0;
-  padding-left: 18px;
+  margin: 4px 0 8px 0;
+  padding-left: 20px;
 }
 
 .markdown-body :deep(li) {
   margin: 2px 0;
+  line-height: 1.5;
+}
+
+.markdown-body :deep(li):last-child {
+  margin-bottom: 0;
 }
 
 .markdown-body :deep(code) {
@@ -743,8 +754,8 @@ onMounted(() => {
 
 .markdown-body :deep(blockquote) {
   border-left: 3px solid #667eea;
-  margin: 4px 0;
-  padding: 4px 8px;
+  margin: 6px 0;
+  padding: 6px 10px;
   background: rgba(102, 126, 234, 0.05);
   border-radius: 0 4px 4px 0;
   color: #4b5563;
@@ -752,7 +763,7 @@ onMounted(() => {
 
 .markdown-body :deep(table) {
   border-collapse: collapse;
-  margin: 4px 0;
+  margin: 6px 0;
   width: 100%;
   border-radius: 4px;
   overflow: hidden;
