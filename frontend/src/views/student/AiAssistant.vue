@@ -163,13 +163,20 @@ const quickQuestions = [
 // 配置marked with highlight.js
 const renderer = new marked.Renderer()
 
-renderer.code = function(code, language) {
-  const validLanguage = hljs.getLanguage(language) ? language : 'plaintext'
-  const highlighted = hljs.highlight(code, { language: validLanguage }).value
+renderer.code = function(code, language, escaped) {
+  // 兼容新版本marked的参数格式
+  let codeText = code
+  let lang = language
+  if (typeof code === 'object') {
+    codeText = code.text
+    lang = code.lang
+  }
+  const validLanguage = hljs.getLanguage(lang) ? lang : 'plaintext'
+  const highlighted = hljs.highlight(codeText, { language: validLanguage }).value
   return `<div class="code-block">
     <div class="code-header">
-      <span class="code-language">${language || 'code'}</span>
-      <button class="copy-btn" onclick="copyCode(this)" data-code="${encodeURIComponent(code)}">
+      <span class="code-language">${lang || 'code'}</span>
+      <button class="copy-btn" onclick="copyCode(this)" data-code="${encodeURIComponent(codeText)}">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
           <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
         </svg>
