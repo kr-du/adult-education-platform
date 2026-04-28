@@ -288,31 +288,54 @@ async function sendMessage() {
   scrollToBottom()
   loading.value = true
 
+  // 添加一个空的AI消息，用于流式填充
+  const aiMsgId = Date.now() + 1
+  messages.value.push({
+    id: aiMsgId,
+    role: 'assistant',
+    content: '',
+    created_at: new Date().toISOString()
+  })
+
   try {
-    const res = await aiApi.chat({
-      conversation_id: currentConversation.value?.id,
-      message: userMessage
-    })
-
-    // 更新当前对话ID
-    if (!currentConversation.value) {
-      currentConversation.value = { id: res.data.conversation_id }
-      await fetchConversations()
-    }
-
-    // 添加AI回复，确保有时间
-    const aiMsg = res.data.ai_message
-    if (!aiMsg.created_at) {
-      aiMsg.created_at = new Date().toISOString()
-    }
-    messages.value.push(aiMsg)
+    await aiApi.chatStream(
+      {
+        conversation_id: currentConversation.value?.id,
+        message: userMessage
+      },
+      // onMessage - 每收到一个chunk就追加显示
+      (chunk) => {
+        const aiMsg = messages.value.find(m => m.id === aiMsgId)
+        if (aiMsg) {
+          aiMsg.content += chunk
+          scrollToBottom()
+        }
+      },
+      // onDone - 流式完成
+      async (conversationId) => {
+        // 更新当前对话ID（新对话时）
+        if (!currentConversation.value && conversationId) {
+          currentConversation.value = { id: parseInt(conversationId) }
+          await fetchConversations()
+        }
+        loading.value = false
+        scrollToBottom()
+      },
+      // onError - 出错处理
+      (err) => {
+        console.error('流式请求失败:', err)
+        ElMessage.error('发送失败，请重试')
+        // 移除失败的AI消息
+        const idx = messages.value.findIndex(m => m.id === aiMsgId)
+        if (idx !== -1) messages.value.splice(idx, 1)
+        loading.value = false
+      }
+    )
   } catch (e) {
     ElMessage.error('发送失败，请重试')
-    // 移除失败的消息
-    messages.value.pop()
-  } finally {
+    const idx = messages.value.findIndex(m => m.id === aiMsgId)
+    if (idx !== -1) messages.value.splice(idx, 1)
     loading.value = false
-    scrollToBottom()
   }
 }
 

@@ -194,6 +194,56 @@ export const aiApi = {
   getConversationMessages: (id) => api.get(`/ai/conversations/${id}`),
   deleteConversation: (id) => api.delete(`/ai/conversations/${id}`),
   chat: (data) => api.post("/ai/chat", data),
+  chatStream: (data, onMessage, onDone, onError) => {
+    const userStore = useUserStore();
+    fetch("/api/ai/chat/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userStore.token}`,
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        // 获取conversation_id
+        const conversationId = response.headers.get("Conversation-Id");
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        function read() {
+          reader.read().then(({ done, value }) => {
+            if (done) {
+              onDone(conversationId);
+              return;
+            }
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const data = line.slice(6);
+                if (data === "[DONE]") {
+                  onDone(conversationId);
+                  return;
+                }
+                onMessage(data);
+              }
+            }
+            read();
+          }).catch((err) => {
+            onError(err);
+          });
+        }
+        read();
+      })
+      .catch((err) => {
+        onError(err);
+      });
+  },
 };
 
 // 讨论区API
