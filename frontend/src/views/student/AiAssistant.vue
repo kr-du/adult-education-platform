@@ -92,7 +92,7 @@
           </div>
 
           <!-- 加载中 -->
-          <div v-if="loading" class="message-item assistant">
+          <div v-if="waitingResponse" class="message-item assistant">
             <div class="message-avatar">
               <el-avatar :size="32" class="ai-avatar">
                 <el-icon :size="16"><Service /></el-icon>
@@ -150,6 +150,7 @@ const currentConversation = ref(null)
 const messages = ref([])
 const inputMessage = ref('')
 const loading = ref(false)
+const waitingResponse = ref(false)
 const messagesContainer = ref(null)
 
 const quickQuestions = [
@@ -287,6 +288,7 @@ async function sendMessage() {
 
   scrollToBottom()
   loading.value = true
+  waitingResponse.value = true
 
   // 添加一个空的AI消息，用于流式填充
   const aiMsgId = Date.now() + 1
@@ -305,6 +307,10 @@ async function sendMessage() {
       },
       // onMessage - 每收到一个chunk就追加显示
       (chunk) => {
+        // 收到第一个chunk时，隐藏loading动画
+        if (waitingResponse.value) {
+          waitingResponse.value = false
+        }
         const aiMsg = messages.value.find(m => m.id === aiMsgId)
         if (aiMsg) {
           aiMsg.content += chunk
@@ -319,6 +325,7 @@ async function sendMessage() {
           await fetchConversations()
         }
         loading.value = false
+        waitingResponse.value = false
         scrollToBottom()
       },
       // onError - 出错处理
@@ -329,6 +336,7 @@ async function sendMessage() {
         const idx = messages.value.findIndex(m => m.id === aiMsgId)
         if (idx !== -1) messages.value.splice(idx, 1)
         loading.value = false
+        waitingResponse.value = false
       }
     )
   } catch (e) {
@@ -336,6 +344,7 @@ async function sendMessage() {
     const idx = messages.value.findIndex(m => m.id === aiMsgId)
     if (idx !== -1) messages.value.splice(idx, 1)
     loading.value = false
+    waitingResponse.value = false
   }
 }
 
