@@ -1,21 +1,12 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
-from app.models.announcement import Discussion
-from app.models.course import Course
 from app.models.user import User
-
+from app.models.course import Course
+from app.models.announcement import Discussion
+from app.utils.auth import get_current_user
 
 discussions_bp = Blueprint('discussions', __name__)
-
-
-def get_current_user():
-    user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
-    if not user:
-        from flask import abort
-        abort(404, description="用户不存在")
-    return user
 
 
 @discussions_bp.route('/course/<int:course_id>', methods=['GET'])

@@ -2,15 +2,12 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.user import User
-from app.models.course import Course, Enrollment, Lesson, LessonProgress
+from app.models.course import Course
 from app.models.interaction import Review, Message, Question, Answer, CourseNotice
+from app.models.announcement import Discussion
+from app.utils.auth import get_current_user, teacher_required, get_pagination_params
 
 interactions_bp = Blueprint('interactions', __name__)
-
-
-def get_current_user():
-    user_id = int(get_jwt_identity())
-    return User.query.get(user_id)
 
 
 # ==================== Reviews (课程评价) ====================
@@ -485,13 +482,11 @@ def get_course_statistics(course_id):
 @interactions_bp.route('/admin/reviews', methods=['GET'])
 @jwt_required()
 def get_admin_reviews():
-    """获取待审核的评价列表"""
     user = get_current_user()
     if user.role not in ['admin', 'teacher']:
         return jsonify({'error': '无权限'}), 403
-    
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
+
+    page, per_page = get_pagination_params(default_per_page=20)
     status = request.args.get('status', 'pending')
     course_id = request.args.get('course_id', type=int)
     
@@ -570,13 +565,11 @@ def reject_review(review_id):
 @interactions_bp.route('/admin/questions', methods=['GET'])
 @jwt_required()
 def get_admin_questions():
-    """获取待审核的问题列表"""
     user = get_current_user()
     if user.role not in ['admin', 'teacher']:
         return jsonify({'error': '无权限'}), 403
-    
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
+
+    page, per_page = get_pagination_params(default_per_page=20)
     status = request.args.get('status', 'pending')
     course_id = request.args.get('course_id', type=int)
     
@@ -655,13 +648,11 @@ def reject_question(question_id):
 @interactions_bp.route('/admin/answers', methods=['GET'])
 @jwt_required()
 def get_admin_answers():
-    """获取待审核的回答列表"""
     user = get_current_user()
     if user.role not in ['admin', 'teacher']:
         return jsonify({'error': '无权限'}), 403
-    
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
+
+    page, per_page = get_pagination_params(default_per_page=20)
     status = request.args.get('status', 'pending')
     
     query = Answer.query
@@ -740,15 +731,11 @@ def reject_answer(answer_id):
 @interactions_bp.route('/admin/discussions', methods=['GET'])
 @jwt_required()
 def get_admin_discussions():
-    """获取待审核的讨论列表"""
-    from app.models.announcement import Discussion
-    
     user = get_current_user()
     if user.role not in ['admin', 'teacher']:
         return jsonify({'error': '无权限'}), 403
-    
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
+
+    page, per_page = get_pagination_params(default_per_page=20)
     status = request.args.get('status', 'pending')
     course_id = request.args.get('course_id', type=int)
     
@@ -783,9 +770,6 @@ def get_admin_discussions():
 @interactions_bp.route('/admin/discussions/<int:discussion_id>/approve', methods=['PUT'])
 @jwt_required()
 def approve_discussion(discussion_id):
-    """审核通过讨论"""
-    from app.models.announcement import Discussion
-    
     user = get_current_user()
     if user.role not in ['admin', 'teacher']:
         return jsonify({'error': '无权限'}), 403
@@ -807,9 +791,6 @@ def approve_discussion(discussion_id):
 @interactions_bp.route('/admin/discussions/<int:discussion_id>/reject', methods=['PUT'])
 @jwt_required()
 def reject_discussion(discussion_id):
-    """审核拒绝讨论"""
-    from app.models.announcement import Discussion
-    
     user = get_current_user()
     if user.role not in ['admin', 'teacher']:
         return jsonify({'error': '无权限'}), 403
@@ -842,13 +823,11 @@ def get_admin_statistics():
         pending_reviews = Review.query.filter(Review.course_id.in_(teacher_course_ids), Review.status == 'pending').count()
         pending_questions = Question.query.filter(Question.course_id.in_(teacher_course_ids), Question.status == 'pending').count()
         pending_answers = Answer.query.join(Question).filter(Question.course_id.in_(teacher_course_ids), Answer.status == 'pending').count()
-        from app.models.announcement import Discussion
         pending_discussions = Discussion.query.filter(Discussion.course_id.in_(teacher_course_ids), Discussion.parent_id.is_(None), Discussion.status == 'pending').count()
     else:
         pending_reviews = Review.query.filter_by(status='pending').count()
         pending_questions = Question.query.filter_by(status='pending').count()
         pending_answers = Answer.query.filter_by(status='pending').count()
-        from app.models.announcement import Discussion
         pending_discussions = Discussion.query.filter(Discussion.parent_id.is_(None), Discussion.status == 'pending').count()
     
     return jsonify({
@@ -926,9 +905,6 @@ def delete_answer_admin(answer_id):
 @interactions_bp.route('/admin/discussions/<int:discussion_id>', methods=['DELETE'])
 @jwt_required()
 def delete_discussion_admin(discussion_id):
-    """管理员删除讨论"""
-    from app.models.announcement import Discussion
-    
     user = get_current_user()
     if user.role not in ['admin', 'teacher']:
         return jsonify({'error': '无权限'}), 403
@@ -1006,9 +982,6 @@ def delete_all_approved_answers():
 @interactions_bp.route('/admin/discussions/delete-all-approved', methods=['DELETE'])
 @jwt_required()
 def delete_all_approved_discussions():
-    """删除所有已通过的讨论"""
-    from app.models.announcement import Discussion
-    
     user = get_current_user()
     if user.role not in ['admin', 'teacher']:
         return jsonify({'error': '无权限'}), 403

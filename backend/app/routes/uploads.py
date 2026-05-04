@@ -1,9 +1,10 @@
 import os
 import uuid
-from flask import Blueprint, request, jsonify, send_from_directory
+from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.user import User
+from app.utils.auth import get_current_user, teacher_required
 from app.utils.security import validate_file_upload, sanitize_filename, generate_safe_filename, handle_api_error
 
 uploads_bp = Blueprint('uploads', __name__)
@@ -11,11 +12,6 @@ uploads_bp = Blueprint('uploads', __name__)
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'uploads')
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'webm', 'ogg'}
-
-
-def get_current_user():
-    user_id = int(get_jwt_identity())
-    return User.query.get(user_id)
 
 
 def handle_upload_error(f):

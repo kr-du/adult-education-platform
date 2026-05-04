@@ -2,15 +2,11 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.user import User
-from app.models.course import Course, Enrollment
-from app.models.assignment import Submission
+from app.models.course import Course, Enrollment, Lesson, LessonProgress
+from app.models.assignment import Assignment, Submission
+from app.utils.auth import get_current_user, teacher_required, get_pagination_params
 
 users_bp = Blueprint('users', __name__)
-
-
-def get_current_user():
-    user_id = int(get_jwt_identity())
-    return User.query.get(user_id)
 
 
 @users_bp.route('/learning-records', methods=['GET'])
@@ -57,14 +53,9 @@ def get_grades():
 
 
 @users_bp.route('/teacher/students', methods=['GET'])
-@jwt_required()
+@teacher_required
 def get_teacher_students():
     user = get_current_user()
-    if user.role not in ['teacher', 'admin']:
-        return jsonify({'error': '无权限'}), 403
-
-    from app.models.assignment import Assignment
-    from app.models.course import Lesson, LessonProgress
 
     courses = Course.query.filter_by(teacher_id=user.id).all()
     result = []
@@ -115,11 +106,9 @@ def get_teacher_students():
 
 
 @users_bp.route('/teacher/statistics', methods=['GET'])
-@jwt_required()
+@teacher_required
 def get_teacher_statistics():
     user = get_current_user()
-    if user.role not in ['teacher', 'admin']:
-        return jsonify({'error': '无权限'}), 403
 
     courses = Course.query.filter_by(teacher_id=user.id).all()
 

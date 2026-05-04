@@ -46,6 +46,7 @@ import { useRouter } from 'vue-router'
 import { authApi } from '@/api'
 import { ElMessage } from 'element-plus'
 import { Lock } from '@element-plus/icons-vue'
+import { createConfirmValidator } from '@/utils/security'
 
 const router = useRouter()
 const formRef = ref()
@@ -56,14 +57,6 @@ const form = reactive({
   new_password: '',
   confirm_password: ''
 })
-
-const validateConfirm = (rule, value, callback) => {
-  if (value !== form.new_password) {
-    callback(new Error('两次输入的密码不一致'))
-  } else {
-    callback()
-  }
-}
 
 const rules = {
   email: [
@@ -76,7 +69,7 @@ const rules = {
   ],
   confirm_password: [
     { required: true, message: '请确认密码', trigger: 'change' },
-    { validator: validateConfirm, trigger: 'change' }
+    { validator: createConfirmValidator(() => form.new_password), trigger: 'change' }
   ]
 }
 

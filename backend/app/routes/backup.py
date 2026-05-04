@@ -1,16 +1,17 @@
 """数据备份与恢复API"""
+import json
+import os
+from datetime import datetime
 from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.user import User
-from app.models.course import Course, Category, Enrollment, Lesson
-from app.models.assignment import Assignment, Submission
+from app.models.course import Course, Category, Lesson, Enrollment
 from app.models.interaction import Review, Question, Answer, Message, CourseNotice
+from app.models.assignment import Assignment, Submission
 from app.models.announcement import Announcement, Discussion
-import json
-import os
-from datetime import datetime
-from sqlalchemy import text
+from app.models.ai import AiConversation
+from app.utils.auth import get_current_user, admin_required
 
 backup_bp = Blueprint('backup', __name__)
 
@@ -19,27 +20,11 @@ BACKUP_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file
 os.makedirs(BACKUP_DIR, exist_ok=True)
 
 
-def admin_required(fn):
-    """管理员权限装饰器"""
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        user_id = int(get_jwt_identity())
-        user = User.query.get(user_id)
-        if not user or user.role != 'admin':
-            return jsonify({'error': '需要管理员权限'}), 403
-        return fn(*args, **kwargs)
-    return wrapper
-
-
 @backup_bp.route('/export', methods=['POST'])
-@jwt_required()
+@admin_required
 def export_data():
-    """导出数据备份"""
-    user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
-    if not user or user.role != 'admin':
-        return jsonify({'error': '需要管理员权限'}), 403
-    
+    user = get_current_user()
+
     data = request.get_json() or {}
     tables = data.get('tables', 'all')  # all 或 指定表名列表
     
@@ -103,14 +88,8 @@ def export_data():
 
 
 @backup_bp.route('/download/<filename>', methods=['GET'])
-@jwt_required()
+@admin_required
 def download_backup(filename):
-    """下载备份文件"""
-    user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
-    if not user or user.role != 'admin':
-        return jsonify({'error': '需要管理员权限'}), 403
-    
     filepath = os.path.join(BACKUP_DIR, filename)
     if not os.path.exists(filepath):
         return jsonify({'error': '备份文件不存在'}), 404
@@ -119,14 +98,8 @@ def download_backup(filename):
 
 
 @backup_bp.route('/list', methods=['GET'])
-@jwt_required()
+@admin_required
 def list_backups():
-    """获取备份列表"""
-    user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
-    if not user or user.role != 'admin':
-        return jsonify({'error': '需要管理员权限'}), 403
-    
     backups = []
     for filename in os.listdir(BACKUP_DIR):
         if filename.endswith('.json'):
@@ -145,14 +118,8 @@ def list_backups():
 
 
 @backup_bp.route('/delete/<filename>', methods=['DELETE'])
-@jwt_required()
+@admin_required
 def delete_backup(filename):
-    """删除备份文件"""
-    user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
-    if not user or user.role != 'admin':
-        return jsonify({'error': '需要管理员权限'}), 403
-    
     filepath = os.path.join(BACKUP_DIR, filename)
     if not os.path.exists(filepath):
         return jsonify({'error': '备份文件不存在'}), 404
@@ -161,14 +128,9 @@ def delete_backup(filename):
     return jsonify({'message': '备份已删除'})
 
 
-@backup_bp.route('/restore', methods=['POST'])
-@jwt_required()
-def restore_data():
-    """从备份恢复数据"""
-    user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
-    if not user or user.role != 'admin':
-        return jsonify({'error': '需要管理员权限'}), 403
+@backup_bp.route('/import', methods=['POST'])
+@admin_required
+def import_data():
     
     if 'file' not in request.files:
         return jsonify({'error': '请上传备份文件'}), 400
@@ -272,14 +234,8 @@ def restore_data():
 
 
 @backup_bp.route('/statistics', methods=['GET'])
-@jwt_required()
+@admin_required
 def get_statistics():
-    """获取数据库统计信息"""
-    user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
-    if not user or user.role != 'admin':
-        return jsonify({'error': '需要管理员权限'}), 403
-    
     stats = {
         'users': User.query.count(),
         'categories': Category.query.count(),

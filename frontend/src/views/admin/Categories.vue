@@ -13,9 +13,9 @@
 
     <div class="table-card">
       <el-table :data="categories" stripe v-loading="loading" class="admin-table">
-        <el-table-column prop="id" label="ID" width="80" align="center">
-          <template #default="{ row }">
-            <span class="id-badge">#{{ row.id }}</span>
+        <el-table-column label="ID" width="80" align="center">
+          <template #default="{ $index }">
+            <span class="id-badge">#{{ $index + 1 }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="name" label="分类名称" min-width="180">

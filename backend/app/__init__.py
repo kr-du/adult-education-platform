@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager
 from config import config
 import os
 
@@ -58,19 +58,6 @@ def create_app(config_name='default'):
     def missing_token_callback(error):
         print(f"JWT缺失: {error}")
         return jsonify({'error': '未提供Token', 'msg': str(error)}), 401
-
-    # 调试路由
-    @app.route('/api/test-token', methods=['GET'])
-    @jwt_required()
-    def test_token():
-        user_id = int(get_jwt_identity())
-        return jsonify({'msg': 'Token有效', 'user_id': user_id})
-
-    @app.route('/api/test-login', methods=['POST'])
-    def test_login():
-        data = request.get_json()
-        print(f"收到登录请求: {data}")
-        return jsonify({'msg': '收到请求', 'data': data})
 
     from app.routes.auth import auth_bp
     from app.routes.courses import courses_bp

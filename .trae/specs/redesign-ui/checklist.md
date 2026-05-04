@@ -1,0 +1,25 @@
+# Checklist
+
+- [x] main.css :root 中所有 CSS 变量已替换为新色彩体系
+- [x] main.css body 背景色已更新
+- [x] main.css 响应式断点和工具类保持完整
+- [x] Navbar 导航栏默认背景为白色实底 #ffffff
+- [x] Navbar 导航栏有底部细边框 1px solid #e5e7eb
+- [x] Navbar 品牌文字在默认/滚动状态下颜色一致（非白色）
+- [x] Navbar 不再包含 backdrop-filter: blur 或相关毛玻璃样式
+- [x] Navbar 不再包含 rgba(255,255,255,0.x) 透明背景色
+- [x] Navbar 移动端菜单面板背景为白色
+- [x] Navbar .top-not-home 相关的条件样式已移除或合并
+- [x] Home.vue Hero 区域不包含 `.hero-bg` SVG 图案
+- [x] Home.vue Hero 区域不包含 `.hero-circle` 浮动圆圈
+- [x] Home.vue Hero 区域不包含 `@keyframes float`
+- [x] Home.vue Hero 区域标题使用纯色 #111827，无渐变文字效果
+- [x] Home.vue 所有 `.hero-badge` / `.section-badge` 药丸徽章已移除
+- [x] Home.vue 卡片 hover 上移幅度不超过 4px
+- [x] Home.vue 卡片阴影强度已降低
+- [x] Home.vue 课程封面默认背景为纯色而非紫色渐变
+- [x] Home.vue 数据统计区不再使用全宽渐变条带
+- [x] Home.vue 数据统计区统计数字为深色 #111827
+- [x] Home.vue CTA 区背景为 #111827 实色（无渐变）
+- [x] 目标文件中不再硬编码使用 `#667eea` 或 `#764ba2`
+- [x] 目标文件中不再硬编码使用 `linear-gradient(135deg, #667eea, #764ba2)`

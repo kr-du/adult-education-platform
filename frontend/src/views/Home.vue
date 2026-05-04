@@ -2,13 +2,12 @@
   <div class="home">
     <!-- 英雄区域 -->
     <section class="hero">
-      <div class="hero-bg"></div>
+      <div class="hero-pattern"></div>
       <div class="container">
         <div class="row align-items-center min-vh-50">
           <div class="col-lg-6">
             <div class="hero-content">
-              <span class="hero-badge">终身学习平台</span>
-              <h1 class="hero-title">开启你的<br><span class="text-gradient">学习之旅</span></h1>
+              <h1 class="hero-title">开启你的<br><span class="hero-title-accent">学习之旅</span></h1>
               <p class="hero-desc">专业的成人再教育平台，提供丰富的在线课程资源，随时随地学习，提升职业技能，成就更好的自己</p>
               <div class="hero-actions">
                 <router-link to="/courses" class="btn btn-hero-primary">
@@ -23,10 +22,12 @@
                   <span class="hero-stat-value">1000+</span>
                   <span class="hero-stat-label">精品课程</span>
                 </div>
+                <div class="hero-stat-divider"></div>
                 <div class="hero-stat">
                   <span class="hero-stat-value">500+</span>
                   <span class="hero-stat-label">专业讲师</span>
                 </div>
+                <div class="hero-stat-divider"></div>
                 <div class="hero-stat">
                   <span class="hero-stat-value">10万+</span>
                   <span class="hero-stat-label">注册学员</span>
@@ -36,11 +37,14 @@
           </div>
           <div class="col-lg-6 d-none d-lg-block">
             <div class="hero-visual">
-              <div class="hero-circle hero-circle-1"></div>
-              <div class="hero-circle hero-circle-2"></div>
-              <div class="hero-circle hero-circle-3"></div>
-              <div class="hero-icon-wrap">
-                <el-icon :size="120" class="hero-icon"><Reading /></el-icon>
+              <div class="hero-shape hero-shape-1"></div>
+              <div class="hero-shape hero-shape-2"></div>
+              <div class="hero-illustration">
+                <div class="hero-book-stack">
+                  <div class="hero-book hero-book-1"></div>
+                  <div class="hero-book hero-book-2"></div>
+                  <div class="hero-book hero-book-3"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -52,15 +56,15 @@
     <section class="features-section">
       <div class="container">
         <div class="section-header">
-          <span class="section-badge">为什么选择我们</span>
+          <div class="section-accent"></div>
           <h2 class="section-title">平台特色</h2>
           <p class="section-desc">我们致力于为学员提供最优质的学习体验</p>
         </div>
         <div class="row g-4">
           <div class="col-lg-3 col-md-6" v-for="feature in features" :key="feature.title">
             <div class="feature-card">
-              <div class="feature-icon" :style="{ background: feature.bgColor }">
-                <el-icon :size="28" :style="{ color: feature.iconColor }">
+              <div class="feature-icon" :class="`feature-icon--${feature.colorKey}`">
+                <el-icon :size="28">
                   <component :is="feature.icon" />
                 </el-icon>
               </div>
@@ -76,7 +80,7 @@
     <section class="courses-section">
       <div class="container">
         <div class="section-header">
-          <span class="section-badge">精选推荐</span>
+          <div class="section-accent"></div>
           <h2 class="section-title">热门课程</h2>
           <p class="section-desc">精心挑选的优质课程，助你快速成长</p>
         </div>
@@ -117,14 +121,16 @@
     <!-- 数据统计 -->
     <section class="stats-section">
       <div class="container">
-        <div class="row g-4">
-          <div class="col-6 col-md-3" v-for="stat in stats" :key="stat.label">
-            <div class="stat-item">
-              <div class="stat-icon">
-                <el-icon :size="24"><component :is="stat.icon" /></el-icon>
+        <div class="stats-wrapper">
+          <div class="row g-4">
+            <div class="col-6 col-md-3" v-for="stat in stats" :key="stat.label">
+              <div class="stat-item">
+                <div class="stat-icon">
+                  <el-icon :size="24"><component :is="stat.icon" /></el-icon>
+                </div>
+                <div class="stat-value">{{ stat.value }}</div>
+                <div class="stat-label">{{ stat.label }}</div>
               </div>
-              <div class="stat-value">{{ stat.value }}</div>
-              <div class="stat-label">{{ stat.label }}</div>
             </div>
           </div>
         </div>
@@ -163,10 +169,10 @@ const userStore = useUserStore()
 const hotCourses = ref([])
 
 const features = [
-  { icon: 'Monitor', title: '随时随地学习', desc: '支持电脑、手机、平板多端访问，碎片化时间高效利用', bgColor: 'rgba(59, 130, 246, 0.1)', iconColor: '#3b82f6' },
-  { icon: 'VideoPlay', title: '优质视频课程', desc: '专业讲师录制，高清视频在线播放，学习体验更佳', bgColor: 'rgba(16, 185, 129, 0.1)', iconColor: '#10b981' },
-  { icon: 'ChatDotRound', title: '互动答疑', desc: '在线讨论交流，讲师实时答疑，学习不再孤单', bgColor: 'rgba(245, 158, 11, 0.1)', iconColor: '#f59e0b' },
-  { icon: 'Trophy', title: '证书认证', desc: '完成课程学习获得证书，为职业发展加分', bgColor: 'rgba(139, 92, 246, 0.1)', iconColor: '#8b5cf6' }
+  { icon: 'Monitor', title: '随时随地学习', desc: '支持电脑、手机、平板多端访问，碎片化时间高效利用', colorKey: 'blue' },
+  { icon: 'VideoPlay', title: '优质视频课程', desc: '专业讲师录制，高清视频在线播放，学习体验更佳', colorKey: 'green' },
+  { icon: 'ChatDotRound', title: '互动答疑', desc: '在线讨论交流，讲师实时答疑，学习不再孤单', colorKey: 'amber' },
+  { icon: 'Trophy', title: '证书认证', desc: '完成课程学习获得证书，为职业发展加分', colorKey: 'purple' }
 ]
 
 const stats = [
@@ -190,19 +196,17 @@ onMounted(async () => {
 /* 英雄区域 */
 .hero {
   position: relative;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 120px 0 80px;
+  background: linear-gradient(160deg, #eef2ff 0%, #f8f9fb 50%, #fff 100%);
+  padding: 100px 0 60px;
   overflow: hidden;
-  margin-top: -72px;
 }
 
-.hero-bg {
+.hero-pattern {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  inset: 0;
+  background-image: radial-gradient(circle, #c7d2fe 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.4;
 }
 
 .hero-content {
@@ -210,37 +214,24 @@ onMounted(async () => {
   z-index: 1;
 }
 
-.hero-badge {
-  display: inline-block;
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50px;
-  color: #fff;
-  font-size: 14px;
-  margin-bottom: 24px;
-  backdrop-filter: blur(10px);
-}
-
 .hero-title {
-  font-size: 56px;
-  font-weight: 800;
-  color: #fff;
+  font-size: 44px;
+  font-weight: 700;
+  color: #111827;
   line-height: 1.2;
   margin-bottom: 24px;
 }
 
-.text-gradient {
-  background: linear-gradient(135deg, #fff 0%, #e0e7ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.hero-title-accent {
+  color: #2563eb;
 }
 
 .hero-desc {
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #6b7280;
   line-height: 1.8;
   margin-bottom: 32px;
+  max-width: 480px;
 }
 
 .hero-actions {
@@ -251,9 +242,9 @@ onMounted(async () => {
 
 .btn-hero-primary {
   padding: 14px 32px;
-  background: #fff;
-  color: #667eea;
-  border-radius: 12px;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 8px;
   font-weight: 600;
   font-size: 16px;
   transition: all 0.3s;
@@ -263,30 +254,36 @@ onMounted(async () => {
 
 .btn-hero-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  color: #667eea;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+  color: #fff;
 }
 
 .btn-hero-outline {
   padding: 14px 32px;
-  background: transparent;
-  color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  border-radius: 12px;
+  background: #fff;
+  color: #2563eb;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
   font-weight: 600;
   font-size: 16px;
   transition: all 0.3s;
 }
 
 .btn-hero-outline:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #fff;
+  background: #2563eb;
   color: #fff;
 }
 
 .hero-stats {
   display: flex;
-  gap: 40px;
+  align-items: center;
+  gap: 36px;
+}
+
+.hero-stat-divider {
+  width: 1px;
+  height: 40px;
+  background: #d1d5db;
 }
 
 .hero-stat {
@@ -297,70 +294,88 @@ onMounted(async () => {
 .hero-stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #fff;
+  color: #111827;
 }
 
 .hero-stat-label {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
+  color: #6b7280;
 }
 
 .hero-visual {
   position: relative;
-  height: 400px;
+  height: 420px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.hero-circle {
+.hero-shape {
   position: absolute;
   border-radius: 50%;
-  animation: float 6s ease-in-out infinite;
 }
 
-.hero-circle-1 {
-  width: 300px;
-  height: 300px;
-  background: rgba(255, 255, 255, 0.1);
-  animation-delay: 0s;
+.hero-shape-1 {
+  width: 280px;
+  height: 280px;
+  background: rgba(37, 99, 235, 0.04);
+  top: 40px;
+  right: 40px;
 }
 
-.hero-circle-2 {
+.hero-shape-2 {
   width: 200px;
   height: 200px;
-  background: rgba(255, 255, 255, 0.15);
-  animation-delay: 1s;
+  background: rgba(37, 99, 235, 0.06);
+  bottom: 30px;
+  left: 60px;
 }
 
-.hero-circle-3 {
-  width: 100px;
-  height: 100px;
-  background: rgba(255, 255, 255, 0.2);
-  animation-delay: 2s;
-}
-
-.hero-icon-wrap {
+.hero-illustration {
   position: relative;
   z-index: 1;
+}
+
+.hero-book-stack {
+  position: relative;
   width: 180px;
-  height: 180px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(10px);
+  height: 200px;
 }
 
-.hero-icon {
-  color: #fff;
+.hero-book {
+  position: absolute;
+  border-radius: 4px 12px 12px 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: transform 0.4s ease;
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+.hero-book-1 {
+  bottom: 0;
+  left: 10px;
+  width: 140px;
+  height: 24px;
+  background: #93c5fd;
 }
+
+.hero-book-2 {
+  bottom: 22px;
+  left: 20px;
+  width: 150px;
+  height: 28px;
+  background: #60a5fa;
+}
+
+.hero-book-3 {
+  bottom: 48px;
+  left: 0;
+  width: 160px;
+  height: 32px;
+  background: #2563eb;
+}
+
+.hero-book-stack:hover .hero-book-1 { transform: translateX(4px) rotate(-2deg); }
+.hero-book-stack:hover .hero-book-2 { transform: translateX(-3px) rotate(1deg); }
+.hero-book-stack:hover .hero-book-3 { transform: translateX(2px) rotate(-1deg); }
 
 /* 通用区块样式 */
 .section-header {
@@ -368,20 +383,18 @@ onMounted(async () => {
   margin-bottom: 48px;
 }
 
-.section-badge {
-  display: inline-block;
-  padding: 6px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50px;
-  color: #fff;
-  font-size: 13px;
-  margin-bottom: 16px;
+.section-accent {
+  width: 40px;
+  height: 4px;
+  background: #2563eb;
+  border-radius: 2px;
+  margin: 0 auto 16px;
 }
 
 .section-title {
   font-size: 36px;
-  font-weight: 700;
-  color: #1f2937;
+  font-weight: 600;
+  color: #111827;
   margin-bottom: 12px;
 }
 
@@ -398,7 +411,8 @@ onMounted(async () => {
 
 .feature-card {
   background: #fff;
-  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   padding: 32px 24px;
   text-align: center;
   transition: all 0.3s;
@@ -406,24 +420,29 @@ onMounted(async () => {
 }
 
 .feature-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .feature-icon {
   width: 64px;
   height: 64px;
-  border-radius: 16px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 20px;
 }
 
+.feature-icon--blue   { background: #eff6ff; color: #2563eb; }
+.feature-icon--green  { background: #ecfdf5; color: #059669; }
+.feature-icon--amber  { background: #fffbeb; color: #d97706; }
+.feature-icon--purple { background: #f5f3ff; color: #7c3aed; }
+
 .feature-title {
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: #111827;
   margin-bottom: 12px;
 }
 
@@ -442,21 +461,30 @@ onMounted(async () => {
 
 .course-card {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
   transition: all 0.3s;
-  border: 1px solid #f3f4f6;
+  border: 1px solid #e5e7eb;
 }
 
 .course-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .course-cover {
   position: relative;
   height: 160px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.course-cover img {
+  transition: transform 0.4s ease;
+}
+
+.course-card:hover .course-cover img {
+  transform: scale(1.05);
 }
 
 .course-cover-bg {
@@ -465,7 +493,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: #9ca3af;
 }
 
 .course-tag {
@@ -473,11 +501,12 @@ onMounted(async () => {
   top: 12px;
   left: 12px;
   padding: 4px 12px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 50px;
+  background: #fff;
+  border-radius: 4px;
   font-size: 12px;
-  color: #667eea;
+  color: #6b7280;
   font-weight: 500;
+  border: 1px solid #e5e7eb;
 }
 
 .course-body {
@@ -519,7 +548,7 @@ onMounted(async () => {
 .course-price {
   font-size: 20px;
   font-weight: 700;
-  color: #f59e0b;
+  color: #111827;
 }
 
 .course-link {
@@ -527,21 +556,21 @@ onMounted(async () => {
   align-items: center;
   gap: 4px;
   font-size: 14px;
-  color: #667eea;
+  color: #2563eb;
   text-decoration: none;
   transition: all 0.2s;
 }
 
 .course-link:hover {
-  color: #764ba2;
+  color: #1d4ed8;
 }
 
 .btn-more {
   padding: 12px 32px;
   background: transparent;
-  color: #667eea;
-  border: 2px solid #667eea;
-  border-radius: 12px;
+  color: #2563eb;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
   font-weight: 600;
   transition: all 0.3s;
   display: inline-flex;
@@ -549,14 +578,21 @@ onMounted(async () => {
 }
 
 .btn-more:hover {
-  background: #667eea;
+  background: #2563eb;
   color: #fff;
 }
 
 /* 数据统计 */
 .stats-section {
-  padding: 60px 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 80px 0;
+  background: #f8fafc;
+}
+
+.stats-wrapper {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 40px 20px;
 }
 
 .stat-item {
@@ -567,25 +603,25 @@ onMounted(async () => {
 .stat-icon {
   width: 56px;
   height: 56px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 14px;
+  background: #eff6ff;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 16px;
-  color: #fff;
+  color: #2563eb;
 }
 
 .stat-value {
   font-size: 36px;
   font-weight: 700;
-  color: #fff;
+  color: #111827;
   margin-bottom: 8px;
 }
 
 .stat-label {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #6b7280;
 }
 
 /* 行动号召 */
@@ -595,10 +631,25 @@ onMounted(async () => {
 }
 
 .cta-card {
-  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-  border-radius: 24px;
+  background: #111827;
+  border-radius: 8px;
   padding: 60px;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(ellipse at 30% 20%, rgba(37,99,235,0.15) 0%, transparent 60%),
+                    radial-gradient(ellipse at 70% 80%, rgba(37,99,235,0.08) 0%, transparent 60%);
+}
+
+.cta-content {
+  position: relative;
+  z-index: 1;
 }
 
 .cta-title {
@@ -610,7 +661,7 @@ onMounted(async () => {
 
 .cta-desc {
   font-size: 16px;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.75);
   margin-bottom: 32px;
 }
 
@@ -622,16 +673,16 @@ onMounted(async () => {
 
 .btn-cta-primary {
   padding: 14px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #2563eb;
   color: #fff;
-  border-radius: 12px;
+  border-radius: 8px;
   font-weight: 600;
   transition: all 0.3s;
 }
 
 .btn-cta-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
   color: #fff;
 }
 
@@ -639,8 +690,8 @@ onMounted(async () => {
   padding: 14px 32px;
   background: transparent;
   color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
   font-weight: 600;
   transition: all 0.3s;
 }
@@ -653,34 +704,29 @@ onMounted(async () => {
 
 /* 响应式 */
 @media (max-width: 992px) {
-  .hero { padding: 60px 0; margin-top: -56px; }
+  .hero { padding: 60px 0; }
   .hero-title { font-size: 40px; }
   .hero-stats { gap: 24px; }
   .hero-stat-value { font-size: 22px; }
+  .hero-stat-divider { display: none; }
   .min-vh-50 { min-height: auto; }
-  .hero-visual { height: 300px; }
-  .hero-circle-1 { width: 200px; height: 200px; }
-  .hero-circle-2 { width: 150px; height: 150px; }
-  .hero-circle-3 { width: 80px; height: 80px; }
-  .hero-icon-wrap { width: 140px; height: 140px; }
+  .hero-visual { display: none; }
   .section-header { margin-bottom: 32px; }
   .features-section, .courses-section, .cta-section { padding: 60px 0; }
 }
 
 @media (max-width: 768px) {
-  .hero { padding: 40px 0; margin-top: -48px; }
+  .hero { padding: 40px 0; }
   .hero-title { font-size: 28px; margin-bottom: 16px; }
   .hero-desc { font-size: 14px; margin-bottom: 24px; }
   .hero-actions { flex-direction: column; margin-bottom: 32px; gap: 12px; }
   .btn-hero-primary, .btn-hero-outline { width: 100%; justify-content: center; padding: 12px 24px; font-size: 14px; }
   .hero-stats { flex-wrap: wrap; gap: 16px; justify-content: center; }
-  .hero-stat { width: calc(50% - 8px); text-align: center; }
+  .hero-stat { width: auto; }
   .hero-stat-value { font-size: 20px; }
   .hero-stat-label { font-size: 12px; }
-  .hero-visual { display: none; }
   .section-title { font-size: 24px; margin-bottom: 8px; }
   .section-desc { font-size: 14px; margin-bottom: 0; }
-  .section-badge { font-size: 12px; padding: 4px 12px; margin-bottom: 12px; }
   .feature-card { padding: 24px 16px; }
   .feature-icon { width: 48px; height: 48px; margin-bottom: 12px; }
   .feature-title { font-size: 16px; margin-bottom: 8px; }
@@ -696,7 +742,7 @@ onMounted(async () => {
   .stat-icon { width: 44px; height: 44px; margin-bottom: 12px; }
   .stat-value { font-size: 28px; margin-bottom: 4px; }
   .stat-label { font-size: 12px; }
-  .cta-card { padding: 32px 20px; border-radius: 16px; }
+  .cta-card { padding: 32px 20px; border-radius: 8px; }
   .cta-title { font-size: 20px; margin-bottom: 12px; }
   .cta-desc { font-size: 14px; margin-bottom: 24px; }
   .cta-actions { flex-direction: column; gap: 12px; }

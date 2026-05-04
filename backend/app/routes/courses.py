@@ -3,14 +3,13 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.course import Course, Category, Lesson, Enrollment, LessonProgress
 from app.models.user import User
+from app.models.interaction import Review, Question, Answer, CourseNotice
+from app.models.assignment import Assignment, Submission
+from app.models.announcement import Discussion
 from app.utils.security import sanitize_search_keyword, sanitize_sort_field, handle_api_error, validate_file_upload, sanitize_filename, generate_safe_filename
+from app.utils.auth import get_current_user, teacher_required, get_pagination_params
 
 courses_bp = Blueprint('courses', __name__)
-
-
-def get_current_user():
-    user_id = int(get_jwt_identity())
-    return User.query.get(user_id)
 
 
 def handle_route_error(f):
@@ -40,8 +39,7 @@ def forbidden_error(error):
 @courses_bp.route('/', methods=['GET'])
 @handle_route_error
 def get_courses():
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 12, type=int)
+    page, per_page = get_pagination_params(default_per_page=12)
     category_id = request.args.get('category_id', type=int)
     keyword = request.args.get('keyword', '')
     teacher_id = request.args.get('teacher_id', type=int)
@@ -134,12 +132,10 @@ def get_course(course_id):
 
 
 @courses_bp.route('/', methods=['POST'])
-@jwt_required()
+@teacher_required
 @handle_route_error
 def create_course():
     user = get_current_user()
-    if user.role not in ['teacher', 'admin']:
-        return jsonify({'error': '无权限'}), 403
 
     data = request.get_json()
 
@@ -221,10 +217,6 @@ def delete_course(course_id):
     Lesson.query.filter_by(course_id=course_id).delete()
 
     # 删除相关的评价记录
-    from app.models.interaction import Review, Question, Answer, CourseNotice
-    from app.models.assignment import Assignment, Submission
-    from app.models.announcement import Discussion
-
     Review.query.filter_by(course_id=course_id).delete()
 
     # 删除相关的讨论记录
@@ -443,14 +435,11 @@ def delete_category(category_id):
 
 
 @courses_bp.route('/teacher/my-courses', methods=['GET'])
-@jwt_required()
+@teacher_required
 def get_teacher_courses():
     user = get_current_user()
-    if user.role not in ['teacher', 'admin']:
-        return jsonify({'error': '无权限'}), 403
 
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 12, type=int)
+    page, per_page = get_pagination_params(default_per_page=12)
     status = request.args.get('status')
 
     query = Course.query.filter_by(teacher_id=user.id)

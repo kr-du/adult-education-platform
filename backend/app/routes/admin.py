@@ -1,4 +1,3 @@
-from functools import wraps
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
@@ -8,26 +7,9 @@ from app.models.assignment import Submission
 from app.models.announcement import Announcement
 from app.models.interaction import Review, Message, Question, Answer, CourseNotice
 from app.models.ai import AiConversation
+from app.utils.auth import get_current_user, admin_required, get_pagination_params
 
 admin_bp = Blueprint('admin', __name__)
-
-
-def get_current_user():
-    """获取当前登录用户"""
-    user_id = int(get_jwt_identity())
-    return User.query.get(user_id)
-
-
-def admin_required(fn):
-    """管理员权限装饰器"""
-    @wraps(fn)
-    @jwt_required()
-    def wrapper(*args, **kwargs):
-        user = get_current_user()
-        if not user or user.role != 'admin':
-            return jsonify({'error': '需要管理员权限'}), 403
-        return fn(*args, **kwargs)
-    return wrapper
 
 
 @admin_bp.route('/users', methods=['GET'])
@@ -36,8 +18,7 @@ def get_users():
     role = request.args.get('role')
     status = request.args.get('status')
     keyword = request.args.get('keyword', '')
-    page = request.args.get('page', 1, type=int)
-    page_size = request.args.get('page_size', 10, type=int)
+    page, page_size = get_pagination_params(default_per_page=10)
 
     query = User.query
 
@@ -449,11 +430,10 @@ def get_statistics():
 @admin_bp.route('/courses', methods=['GET'])
 @admin_required
 def get_all_courses():
-    page = request.args.get('page', 1, type=int) # 当前页码
-    per_page = request.args.get('per_page', 20, type=int) # 每页显示数量
-    status = request.args.get('status') # 课程状态
-    category_id = request.args.get('category_id', type=int) # 课程分类
-    keyword = request.args.get('keyword', '') # 课程关键字
+    page, per_page = get_pagination_params(default_per_page=20)
+    status = request.args.get('status')
+    category_id = request.args.get('category_id', type=int)
+    keyword = request.args.get('keyword', '')
 
     query = Course.query # 课程查询对象
     if status:

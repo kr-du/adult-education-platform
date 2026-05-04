@@ -3,6 +3,18 @@ import { useUserStore } from "@/store/user";
 import { ElMessage } from "element-plus";
 import router from "@/router";
 
+let authExpiredTimer = null;
+export function handleAuthExpired() {
+  if (authExpiredTimer) return;
+  authExpiredTimer = setTimeout(() => {
+    authExpiredTimer = null;
+  }, 1000);
+  const userStore = useUserStore();
+  userStore.logout();
+  router.push("/login");
+  ElMessage.error("登录已过期，请重新登录");
+}
+
 // 创建axios实例
 const api = axios.create({
   baseURL: "/api",
@@ -22,25 +34,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API请求错误:', error);
-    
+    console.error("API请求错误:", error);
+
     if (error.response?.status === 401) {
-      const userStore = useUserStore();
-      const currentRoute = router.currentRoute.value;
-      
-      // 避免在登录页面重复跳转
-      if (currentRoute.name !== 'Login' && currentRoute.path !== '/login') {
-        userStore.logout();
-        router.push("/login");
-        ElMessage.error("登录已过期，请重新登录");
-      }
+      handleAuthExpired();
     } else if (error.response?.status >= 500) {
       ElMessage.error("服务器错误，请稍后重试");
     } else if (!error.response) {
       ElMessage.error("网络连接失败，请检查网络");
     }
     // 403和404错误由调用方自行处理，不在此统一显示
-    
+
     return Promise.reject(error);
   },
 );
@@ -76,12 +80,14 @@ export const courseApi = {
 export const assignmentApi = {
   // 教师端
   getTeacherAssignments: () => api.get("/assignments/teacher"),
-  getCourseAssignments: (courseId) => api.get(`/assignments/course/${courseId}`),
+  getCourseAssignments: (courseId) =>
+    api.get(`/assignments/course/${courseId}`),
   getAssignment: (id) => api.get(`/assignments/${id}`),
   createAssignment: (data) => api.post("/assignments/", data),
   updateAssignment: (id, data) => api.put(`/assignments/${id}`, data),
   deleteAssignment: (id) => api.delete(`/assignments/${id}`),
-  getSubmissions: (assignmentId) => api.get(`/assignments/submissions/${assignmentId}`),
+  getSubmissions: (assignmentId) =>
+    api.get(`/assignments/submissions/${assignmentId}`),
   gradeSubmission: (id, data) => api.post(`/assignments/grade/${id}`, data),
 
   // 学生端
@@ -119,22 +125,26 @@ export const adminApi = {
   approveReview: (id) => api.put(`/admin/reviews/${id}/approve`),
   rejectReview: (id) => api.put(`/admin/reviews/${id}/reject`),
   deleteReview: (id) => api.delete(`/admin/reviews/${id}`),
-  deleteAllApprovedReviews: () => api.delete("/admin/reviews/delete-all-approved"),
+  deleteAllApprovedReviews: () =>
+    api.delete("/admin/reviews/delete-all-approved"),
   getAdminQuestions: (params) => api.get("/admin/questions", { params }),
   approveQuestion: (id) => api.put(`/admin/questions/${id}/approve`),
   rejectQuestion: (id) => api.put(`/admin/questions/${id}/reject`),
   deleteQuestion: (id) => api.delete(`/admin/questions/${id}`),
-  deleteAllApprovedQuestions: () => api.delete("/admin/questions/delete-all-approved"),
+  deleteAllApprovedQuestions: () =>
+    api.delete("/admin/questions/delete-all-approved"),
   getAdminAnswers: (params) => api.get("/admin/answers", { params }),
   approveAnswer: (id) => api.put(`/admin/answers/${id}/approve`),
   rejectAnswer: (id) => api.put(`/admin/answers/${id}/reject`),
   deleteAnswer: (id) => api.delete(`/admin/answers/${id}`),
-  deleteAllApprovedAnswers: () => api.delete("/admin/answers/delete-all-approved"),
+  deleteAllApprovedAnswers: () =>
+    api.delete("/admin/answers/delete-all-approved"),
   getAdminDiscussions: (params) => api.get("/admin/discussions", { params }),
   approveDiscussion: (id) => api.put(`/admin/discussions/${id}/approve`),
   rejectDiscussion: (id) => api.put(`/admin/discussions/${id}/reject`),
   deleteDiscussion: (id) => api.delete(`/admin/discussions/${id}`),
-  deleteAllApprovedDiscussions: () => api.delete("/admin/discussions/delete-all-approved"),
+  deleteAllApprovedDiscussions: () =>
+    api.delete("/admin/discussions/delete-all-approved"),
 };
 
 // 定义上传API接口
@@ -205,6 +215,10 @@ export const aiApi = {
       body: JSON.stringify(data),
     })
       .then((response) => {
+        if (response.status === 401) {
+          handleAuthExpired();
+          return;
+        }
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -215,28 +229,38 @@ export const aiApi = {
         let buffer = "";
 
         function read() {
-          reader.read().then(({ done, value }) => {
-            if (done) {
-              onDone(conversationId);
-              return;
-            }
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                const data = line.slice(6);
-                if (data === "[DONE]") {
-                  onDone(conversationId);
-                  return;
-                }
-                onMessage(data);
+          reader
+            .read()
+            .then(({ done, value }) => {
+              if (done) {
+                onDone(conversationId);
+                return;
               }
-            }
-            read();
-          }).catch((err) => {
-            onError(err);
-          });
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n");
+              buffer = lines.pop() || "";
+              for (const line of lines) {
+                if (line.startsWith("data: ")) {
+                  const data = line.slice(6);
+                  if (data === "[DONE]") {
+                    onDone(conversationId);
+                    return;
+                  }
+                  try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.text !== undefined) {
+                      onMessage(parsed.text);
+                    }
+                  } catch {
+                    onMessage(data);
+                  }
+                }
+              }
+              read();
+            })
+            .catch((err) => {
+              onError(err);
+            });
         }
         read();
       })
@@ -248,7 +272,8 @@ export const aiApi = {
 
 // 讨论区API
 export const discussionApi = {
-  getCourseDiscussions: (courseId) => api.get(`/discussions/course/${courseId}`),
+  getCourseDiscussions: (courseId) =>
+    api.get(`/discussions/course/${courseId}`),
   createDiscussion: (data) => api.post("/discussions/", data),
   getReplies: (discussionId) => api.get(`/discussions/${discussionId}/replies`),
   deleteDiscussion: (id) => api.delete(`/discussions/${id}`),

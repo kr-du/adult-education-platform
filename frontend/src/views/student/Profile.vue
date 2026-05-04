@@ -1,124 +1,77 @@
 <template>
   <div class="profile-page">
-    <div class="page-container">
-      <div class="row">
-        <div class="col-lg-4 mb-4">
-          <div class="card shadow-sm">
-            <div class="card-body text-center p-4">
-              <el-avatar :size="100" class="mb-3" :src="getAvatarUrl(user.avatar)">
-                {{ user.real_name?.charAt(0) || user.username?.charAt(0) }}
-              </el-avatar>
-              <h4>{{ user.real_name || user.username }}</h4>
-              <p class="text-muted">{{ roleMap[user.role] }}</p>
-              <el-tag :type="statusMap[user.status]?.type">{{ statusMap[user.status]?.label }}</el-tag>
-            </div>
-          </div>
+    <div class="container">
+      <h2 class="page-title mb-4">个人中心</h2>
 
-          <div class="card shadow-sm mt-4">
-            <div class="card-header bg-white">
-              <h6 class="mb-0">账号信息</h6>
-            </div>
-            <div class="card-body">
-              <div class="mb-3">
-                <label class="text-muted small">用户名</label>
-                <p class="mb-0">{{ user.username }}</p>
-              </div>
-              <div class="mb-3">
-                <label class="text-muted small">邮箱</label>
-                <p class="mb-0">{{ user.email }}</p>
-              </div>
-              <div class="mb-3">
-                <label class="text-muted small">手机号</label>
-                <p class="mb-0">{{ user.phone || '未设置' }}</p>
-              </div>
-              <div>
-                <label class="text-muted small">注册时间</label>
-                <p class="mb-0">{{ formatDate(user.created_at) }}</p>
-              </div>
+      <div class="profile-card">
+        <div class="profile-header">
+          <div class="avatar-section">
+            <el-upload
+              class="avatar-uploader"
+              :action="uploadUrl"
+              :headers="uploadHeaders"
+              :show-file-list="false"
+              :on-success="handleAvatarUpload"
+              :before-upload="beforeAvatarUpload"
+              :disabled="uploading"
+            >
+              <img v-if="user.avatar" :src="getAvatarUrl(user.avatar)" class="avatar-img" />
+              <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+            </el-upload>
+            <div class="user-basic-info">
+              <h3>{{ user.real_name || user.username }}</h3>
+              <p>
+                <el-tag :type="user.role === 'admin' ? 'danger' : user.role === 'teacher' ? 'warning' : 'primary'" size="small">
+                  {{ roleMap[user.role] || user.role }}
+                </el-tag>
+                <el-tag :type="user.status === 'active' ? 'success' : 'danger'" size="small" class="ms-2">
+                  {{ statusMap[user.status] || user.status }}
+                </el-tag>
+              </p>
+              <p class="text-muted small">注册时间: {{ formatDate(user.created_at) }}</p>
             </div>
           </div>
         </div>
 
-        <div class="col-lg-8">
-          <div class="card shadow-sm">
-            <div class="card-header bg-white">
-              <h5 class="mb-0">编辑资料</h5>
-            </div>
-            <div class="card-body">
-              <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
-                <div class="row">
-                  <div class="col-md-6">
-                    <el-form-item label="真实姓名" prop="real_name">
-                      <el-input v-model="form.real_name" placeholder="请输入真实姓名" />
-                    </el-form-item>
-                  </div>
-                  <div class="col-md-6">
-                    <el-form-item label="手机号" prop="phone">
-                      <el-input v-model="form.phone" placeholder="请输入手机号" />
-                    </el-form-item>
-                  </div>
-                </div>
-
-                <el-form-item label="头像">
-                  <div class="avatar-upload">
-                    <div class="d-flex gap-3 mb-3">
-                      <el-radio-group v-model="avatarType">
-                      <el-radio value="url">网络图片</el-radio>
-                      <el-radio value="upload">本地上传</el-radio>
-                      </el-radio-group>
-                    </div>
-
-                    <div v-if="avatarType === 'url'">
-                      <el-input v-model="form.avatar" placeholder="请输入头像图片URL" />
-                    </div>
-
-                    <div v-else>
-                      <el-upload
-                        class="avatar-uploader"
-                        :show-file-list="false"
-                        :before-upload="beforeAvatarUpload"
-                        :http-request="handleAvatarUpload"
-                        accept="image/*"
-                      >
-                        <img v-if="form.avatar" :src="getAvatarUrl(form.avatar)" class="avatar-preview" />
-                        <div v-else class="avatar-placeholder">
-                          <el-icon :size="32"><Plus /></el-icon>
-                          <p>点击上传头像</p>
-                        </div>
-                      </el-upload>
-                      <p class="text-muted small mt-2">支持 jpg/png/gif/webp 格式，不超过 5MB</p>
-                    </div>
-                  </div>
+        <div class="profile-body mt-4">
+          <el-tabs v-model="activeTab">
+            <el-tab-pane label="编辑资料" name="profile">
+              <el-form :model="form" :rules="rules" ref="formRef" label-width="80px" class="profile-form">
+                <el-form-item label="姓名" prop="real_name">
+                  <el-input v-model="form.real_name" placeholder="请输入姓名" />
                 </el-form-item>
-
-                <el-button type="primary" :loading="loading" @click="handleSave" class="w-100">保存修改</el-button>
+                <el-form-item label="邮箱" prop="email">
+                  <el-input v-model="form.email" placeholder="请输入邮箱" />
+                </el-form-item>
+                <el-form-item label="手机" prop="phone">
+                  <el-input v-model="form.phone" placeholder="请输入手机号" />
+                </el-form-item>
+                <el-form-item label="简介" prop="bio">
+                  <el-input v-model="form.bio" type="textarea" :rows="3" placeholder="请输入个人简介" />
+                </el-form-item>
+                <el-form-item>
+                  <el-button type="primary" @click="handleSave(formRef)">保存修改</el-button>
+                </el-form-item>
               </el-form>
-            </div>
-          </div>
+            </el-tab-pane>
 
-          <div class="card shadow-sm mt-4">
-            <div class="card-header bg-white">
-              <h5 class="mb-0">修改密码</h5>
-            </div>
-            <div class="card-body">
-              <el-form ref="pwdFormRef" :model="pwdForm" :rules="pwdRules" label-position="top">
-                <div class="row">
-                  <div class="col-md-6">
-                    <el-form-item label="新密码" prop="new_password">
-                      <el-input v-model="pwdForm.new_password" type="password" placeholder="请输入新密码" show-password />
-                    </el-form-item>
-                  </div>
-                  <div class="col-md-6">
-                    <el-form-item label="确认密码" prop="confirm_password">
-                      <el-input v-model="pwdForm.confirm_password" type="password" placeholder="请确认新密码" show-password />
-                    </el-form-item>
-                  </div>
-                </div>
-
-                <el-button type="primary" :loading="pwdLoading" @click="handleChangePassword">修改密码</el-button>
+            <el-tab-pane label="修改密码" name="password">
+              <el-form :model="pwdForm" :rules="pwdRules" ref="pwdFormRef" label-width="100px" class="profile-form">
+                <el-form-item label="当前密码" prop="old_password">
+                  <el-input v-model="pwdForm.old_password" type="password" placeholder="请输入当前密码" show-password />
+                </el-form-item>
+                <el-form-item label="新密码" prop="new_password">
+                  <el-input v-model="pwdForm.new_password" type="password" placeholder="请输入新密码" show-password />
+                </el-form-item>
+                <el-form-item label="确认密码" prop="confirm_password">
+                  <el-input v-model="pwdForm.confirm_password" type="password" placeholder="请确认新密码" show-password />
+                </el-form-item>
+                <el-form-item>
+                  <el-button type="primary" @click="handleChangePassword(pwdFormRef)">修改密码</el-button>
+                </el-form-item>
               </el-form>
-            </div>
-          </div>
+            </el-tab-pane>
+          </el-tabs>
         </div>
       </div>
     </div>
@@ -126,215 +79,130 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { authApi, uploadApi } from '@/api'
-import { useUserStore } from '@/store/user'
-import { ElMessage } from 'element-plus'
+import { ref, computed } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
+import { useUserProfile } from '@/composables/useUserProfile'
 
-const userStore = useUserStore()
-const formRef = ref()
-const pwdFormRef = ref()
-const loading = ref(false)
-const pwdLoading = ref(false)
+const {
+  user,
+  form,
+  pwdForm,
+  rules,
+  pwdRules,
+  statusMap,
+  getAvatarUrl,
+  formatDate,
+  handleAvatarUpload,
+  handleSave,
+  handleChangePassword
+} = useUserProfile()
+
+const activeTab = ref('profile')
 const uploading = ref(false)
-const avatarType = ref('url')
 
-const user = ref({})
+const formRef = ref(null)
+const pwdFormRef = ref(null)
+
+const uploadUrl = computed(() => import.meta.env.VITE_API_BASE_URL + '/api/upload/avatar')
+const uploadHeaders = computed(() => ({
+  Authorization: `Bearer ${localStorage.getItem('token')}`
+}))
 
 const roleMap = {
-  student: '学生',
+  student: '学员',
   teacher: '教师',
   admin: '管理员'
 }
 
-const statusMap = {
-  pending: { label: '待审核', type: 'warning' },
-  approved: { label: '已认证', type: 'success' },
-  rejected: { label: '已拒绝', type: 'danger' }
-}
-
-const form = reactive({
-  real_name: '',
-  phone: '',
-  avatar: ''
-})
-
-const pwdForm = reactive({
-  new_password: '',
-  confirm_password: ''
-})
-
-const rules = {
-  real_name: [{ required: true, message: '请输入真实姓名', trigger: 'change' }],
-  phone: [{ pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'change' }]
-}
-
-const validateConfirm = (rule, value, callback) => {
-  if (value !== pwdForm.new_password) {
-    callback(new Error('两次输入的密码不一致'))
-  } else {
-    callback()
-  }
-}
-
-const pwdRules = {
-  new_password: [
-    { required: true, message: '请输入新密码', trigger: 'change' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'change' }
-  ],
-  confirm_password: [
-    { required: true, message: '请确认密码', trigger: 'change' },
-    { validator: validateConfirm, trigger: 'change' }
-  ]
-}
-
-function getAvatarUrl(avatar) {
-  if (!avatar) return ''
-  if (avatar.startsWith('http')) return avatar
-  return avatar
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('zh-CN')
-}
-
 function beforeAvatarUpload(file) {
-  const isImage = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)
-  const isLt5M = file.size / 1024 / 1024 < 5
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
 
   if (!isImage) {
-    ElMessage.error('只能上传图片文件!')
+    ElMessage.error('只能上传图片文件')
     return false
   }
-  if (!isLt5M) {
-    ElMessage.error('图片大小不能超过 5MB!')
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过2MB')
     return false
   }
-  return true
-}
-
-async function handleAvatarUpload(options) {
-  const formData = new FormData()
-  formData.append('file', options.file)
 
   uploading.value = true
-  try {
-    const res = await uploadApi.uploadAvatar(formData)
-    form.avatar = res.data.url
-    ElMessage.success('头像上传成功')
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || '上传失败')
-  } finally {
+  setTimeout(() => {
     uploading.value = false
-  }
+  }, 3000)
+
+  return true
 }
-
-async function handleSave() {
-  await formRef.value.validate()
-  loading.value = true
-
-  try {
-    const res = await authApi.updateProfile(form)
-    user.value = res.data.user
-    userStore.setUser(res.data.user)
-    ElMessage.success('保存成功')
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || '保存失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleChangePassword() {
-  await pwdFormRef.value.validate()
-  pwdLoading.value = true
-
-  try {
-    await authApi.resetPassword({
-      email: user.value.email,
-      new_password: pwdForm.new_password
-    })
-    ElMessage.success('密码修改成功')
-    pwdForm.new_password = ''
-    pwdForm.confirm_password = ''
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || '修改失败')
-  } finally {
-    pwdLoading.value = false
-  }
-}
-
-onMounted(async () => {
-  try {
-    const res = await authApi.getProfile()
-    user.value = res.data.user
-    form.real_name = user.value.real_name || ''
-    form.phone = user.value.phone || ''
-    form.avatar = user.value.avatar || ''
-
-    if (form.avatar && !form.avatar.startsWith('http')) {
-      avatarType.value = 'upload'
-    }
-  } catch (e) {
-    ElMessage.error('获取用户信息失败')
-  }
-})
 </script>
 
 <style scoped>
-.avatar-uploader {
-  border: 1px dashed #d9d9d9;
-  border-radius: 8px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  width: 150px;
-  height: 150px;
+.profile-page {
+  min-height: 100vh;
+  background: #f5f7fa;
+  padding: 20px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 20px;
+}
+
+.profile-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+
+.profile-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: border-color 0.3s;
 }
 
-.avatar-uploader:hover {
-  border-color: #409eff;
+.avatar-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
-.avatar-preview {
-  width: 100%;
-  height: 100%;
+.avatar-uploader .avatar-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
   object-fit: cover;
+  border: 3px solid #e6e8eb;
 }
 
-.avatar-placeholder {
+.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 80px;
+  height: 80px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #8c939d;
+  border: 2px dashed #dcdfe6;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
-.avatar-placeholder p {
-  margin: 8px 0 0;
-  font-size: 12px;
+.avatar-uploader-icon:hover {
+  border-color: #409eff;
+  color: #409eff;
 }
-    /* 响应式样式 */
-    @media (max-width: 992px) {
-      /* 平板适配 */
-    }
 
-    @media (max-width: 768px) {
-      /* 手机适配 */
-      .page-header { flex-direction: column; gap: 12px; }
-      .el-card { margin-bottom: 12px; }
-      .el-table { font-size: 12px; }
-    .d-flex { flex-wrap: wrap; }
-      .stats-card { margin-bottom: 12px; }
-    }
+.user-basic-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
 
-    @media (max-width: 576px) {
-      /* 小手机适配 */
-    }
+.profile-form {
+  max-width: 500px;
+  margin-top: 20px;
+}
 </style>

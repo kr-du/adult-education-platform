@@ -1,7 +1,6 @@
 <template>
   <div class="ai-assistant">
     <div class="chat-container">
-      <!-- 左侧对话列表 -->
       <div class="conversation-sidebar">
         <div class="sidebar-header">
           <h5 class="mb-0"><el-icon class="me-2"><ChatDotRound /></el-icon>AI学习助手</h5>
@@ -38,18 +37,14 @@
         </div>
       </div>
 
-      <!-- 右侧聊天区域 -->
       <div class="chat-main">
-        <!-- 聊天头部 -->
         <div class="chat-header">
           <h5 class="mb-0">{{ currentConversation?.title || 'AI学习助手' }}</h5>
           <span class="text-muted small">基于智谱AI | 随时为您解答学习问题</span>
         </div>
 
-        <!-- 消息区域 -->
-        <div class="chat-messages" ref="messagesContainer">
-          <!-- 欢迎消息 -->
-          <div v-if="messages.length === 0 && !loading" class="welcome-message">
+        <div class="chat-messages" ref="messagesContainer" @scroll="onMessagesScroll">
+          <div v-if="messages.length === 0 && !loading && !currentConversation" class="welcome-message">
             <div class="welcome-icon">
               <el-icon :size="48"><Service /></el-icon>
             </div>
@@ -67,7 +62,6 @@
             </div>
           </div>
 
-          <!-- 消息列表 -->
           <div v-for="(msg, index) in messages" :key="msg.id" class="message-item" :class="msg.role">
             <div class="message-avatar">
               <el-avatar v-if="msg.role === 'user'" :size="32" class="user-avatar">
@@ -82,40 +76,42 @@
                 <span class="message-sender">{{ msg.role === 'user' ? (userStore.user.real_name || '我') : 'AI助手' }}</span>
               </div>
               <div class="message-bubble" :class="msg.role">
-                <!-- AI回复使用Markdown渲染 -->
-                <div v-if="msg.role === 'assistant'" class="message-text markdown-body" v-html="renderMarkdown(msg.content)"></div>
-                <!-- 用户消息纯文本 -->
+                <template v-if="msg.role === 'assistant'">
+                  <div v-if="msg.streaming && !msg.content" class="typing">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                  </div>
+                  <div v-else-if="msg.streaming && msg.content" class="message-text streaming-text">{{ msg.content }}</div>
+                  <div v-else-if="msg.error" class="message-text error-text">
+                    <span class="error-content">{{ msg.content }}</span>
+                    <el-button type="danger" size="small" text @click="retryMessage(msg)" class="retry-btn">
+                      <el-icon><Refresh /></el-icon>重试
+                    </el-button>
+                  </div>
+                  <div v-else class="message-text markdown-body" v-html="renderMarkdown(msg.content)"></div>
+                </template>
                 <div v-else class="message-text">{{ msg.content }}</div>
               </div>
               <span class="message-time">{{ formatTime(msg.created_at) }}</span>
             </div>
           </div>
-
-          <!-- 加载中 -->
-          <div v-if="waitingResponse" class="message-item assistant">
-            <div class="message-avatar">
-              <el-avatar :size="32" class="ai-avatar">
-                <el-icon :size="16"><Service /></el-icon>
-              </el-avatar>
-            </div>
-            <div class="message-content">
-              <div class="message-bubble typing">
-                <span class="dot"></span>
-                <span class="dot"></span>
-                <span class="dot"></span>
-              </div>
-            </div>
-          </div>
         </div>
 
-        <!-- 输入区域 -->
+        <transition name="fade">
+          <div v-if="showScrollToBottom" class="scroll-to-bottom" @click="scrollToBottom(true)">
+            <el-icon><ArrowDown /></el-icon>
+            <span>回到底部</span>
+          </div>
+        </transition>
+
         <div class="chat-input">
           <el-input
             v-model="inputMessage"
             type="textarea"
             :rows="2"
             placeholder="请输入您的问题..."
-            @keyup.enter.exact="sendMessage"
+            @keydown.enter.exact.prevent="sendMessage"
             :disabled="loading"
           />
           <el-button
@@ -137,7 +133,7 @@ import { ref, onMounted, nextTick, computed, watch } from 'vue'
 import { useUserStore } from '@/store/user'
 import { aiApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChatDotRound, ChatLineRound, Plus, Delete, Service, Position, CopyDocument } from '@element-plus/icons-vue'
+import { ChatDotRound, ChatLineRound, Plus, Delete, Service, Position, CopyDocument, ArrowDown, Refresh } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import hljs from 'highlight.js'
@@ -150,8 +146,9 @@ const currentConversation = ref(null)
 const messages = ref([])
 const inputMessage = ref('')
 const loading = ref(false)
-const waitingResponse = ref(false)
 const messagesContainer = ref(null)
+const isUserScrolledUp = ref(false)
+const showScrollToBottom = ref(false)
 
 const quickQuestions = [
   '如何提高学习效率？',
@@ -160,11 +157,9 @@ const quickQuestions = [
   '推荐一些学习方法'
 ]
 
-// 配置marked with highlight.js
 const renderer = new marked.Renderer()
 
 renderer.code = function(code, language, escaped) {
-  // 兼容新版本marked的参数格式
   let codeText = code
   let lang = language
   if (typeof code === 'object') {
@@ -195,15 +190,11 @@ marked.setOptions({
   mangle: false
 })
 
-// 渲染Markdown
 function renderMarkdown(content) {
   if (!content) return ''
   try {
-    // 确保内容是字符串
     const text = String(content)
-    // 使用marked.parse解析Markdown
     const html = marked.parse(text, { breaks: true, gfm: true })
-    // 使用DOMPurify清理HTML，允许更多标签
     return DOMPurify.sanitize(html, {
       ADD_ATTR: ['onclick', 'data-code'],
       ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'div', 'span', 'img', 'hr'],
@@ -215,7 +206,6 @@ function renderMarkdown(content) {
   }
 }
 
-// 复制代码功能
 window.copyCode = function(btn) {
   const code = decodeURIComponent(btn.dataset.code)
   navigator.clipboard.writeText(code).then(() => {
@@ -230,7 +220,6 @@ window.copyCode = function(btn) {
   })
 }
 
-// 高亮已有代码块
 function highlightCodeBlocks() {
   nextTick(() => {
     document.querySelectorAll('.markdown-body pre code').forEach((block) => {
@@ -239,7 +228,6 @@ function highlightCodeBlocks() {
   })
 }
 
-// 获取对话列表
 async function fetchConversations() {
   try {
     const res = await aiApi.getConversations()
@@ -249,30 +237,26 @@ async function fetchConversations() {
   }
 }
 
-// 选择对话
 async function selectConversation(conv) {
   currentConversation.value = conv
   await fetchMessages(conv.id)
 }
 
-// 获取消息
 async function fetchMessages(conversationId) {
   try {
     const res = await aiApi.getConversationMessages(conversationId)
     messages.value = res.data.messages || []
-    scrollToBottom()
+    scrollToBottom(true)
   } catch (e) {
     ElMessage.error('获取消息失败')
   }
 }
 
-// 创建新对话
 async function createNewChat() {
   currentConversation.value = null
   messages.value = []
 }
 
-// 删除对话
 async function deleteConversation(conv) {
   try {
     await ElMessageBox.confirm('确定删除这个对话吗？', '确认', { type: 'warning' })
@@ -288,14 +272,52 @@ async function deleteConversation(conv) {
   }
 }
 
-// 发送消息
+function performStreamRequest(aiMsgId, userMessage) {
+  aiApi.chatStream(
+    {
+      conversation_id: currentConversation.value?.id,
+      message: userMessage
+    },
+    (chunk) => {
+      const aiMsg = messages.value.find(m => m.id === aiMsgId)
+      if (aiMsg) {
+        aiMsg.content += chunk
+        scrollToBottom()
+      }
+    },
+    async (conversationId) => {
+      const aiMsg = messages.value.find(m => m.id === aiMsgId)
+      if (aiMsg) {
+        aiMsg.streaming = false
+      }
+      if (!currentConversation.value && conversationId) {
+        currentConversation.value = { id: parseInt(conversationId) }
+        await fetchConversations()
+      }
+      loading.value = false
+      highlightCodeBlocks()
+      scrollToBottom()
+    },
+    (err) => {
+      console.error('流式请求失败:', err)
+      ElMessage.error('发送失败，请重试')
+      const aiMsg = messages.value.find(m => m.id === aiMsgId)
+      if (aiMsg) {
+        aiMsg.content = '抱歉，回复失败，请重试'
+        aiMsg.streaming = false
+        aiMsg.error = true
+      }
+      loading.value = false
+    }
+  )
+}
+
 async function sendMessage() {
   if (!inputMessage.value.trim() || loading.value) return
 
   const userMessage = inputMessage.value.trim()
   inputMessage.value = ''
 
-  // 添加用户消息到界面（使用本地时间）
   const now = new Date()
   messages.value.push({
     id: Date.now(),
@@ -304,87 +326,79 @@ async function sendMessage() {
     created_at: now.toISOString()
   })
 
-  scrollToBottom()
+  scrollToBottom(true)
   loading.value = true
-  waitingResponse.value = true
 
-  // 添加一个空的AI消息，用于流式填充
   const aiMsgId = Date.now() + 1
   messages.value.push({
     id: aiMsgId,
     role: 'assistant',
     content: '',
+    streaming: true,
     created_at: new Date().toISOString()
   })
 
   try {
-    await aiApi.chatStream(
-      {
-        conversation_id: currentConversation.value?.id,
-        message: userMessage
-      },
-      // onMessage - 每收到一个chunk就追加显示
-      (chunk) => {
-        // 收到第一个chunk时，隐藏loading动画
-        if (waitingResponse.value) {
-          waitingResponse.value = false
-        }
-        const aiMsg = messages.value.find(m => m.id === aiMsgId)
-        if (aiMsg) {
-          aiMsg.content += chunk
-          scrollToBottom()
-        }
-      },
-      // onDone - 流式完成
-      async (conversationId) => {
-        // 更新当前对话ID（新对话时）
-        if (!currentConversation.value && conversationId) {
-          currentConversation.value = { id: parseInt(conversationId) }
-          await fetchConversations()
-        }
-        loading.value = false
-        waitingResponse.value = false
-        scrollToBottom()
-      },
-      // onError - 出错处理
-      (err) => {
-        console.error('流式请求失败:', err)
-        ElMessage.error('发送失败，请重试')
-        // 移除失败的AI消息
-        const idx = messages.value.findIndex(m => m.id === aiMsgId)
-        if (idx !== -1) messages.value.splice(idx, 1)
-        loading.value = false
-        waitingResponse.value = false
-      }
-    )
+    performStreamRequest(aiMsgId, userMessage)
   } catch (e) {
     ElMessage.error('发送失败，请重试')
-    const idx = messages.value.findIndex(m => m.id === aiMsgId)
-    if (idx !== -1) messages.value.splice(idx, 1)
+    const aiMsg = messages.value.find(m => m.id === aiMsgId)
+    if (aiMsg) {
+      aiMsg.content = '抱歉，回复失败，请重试'
+      aiMsg.streaming = false
+      aiMsg.error = true
+    }
     loading.value = false
-    waitingResponse.value = false
   }
 }
 
-// 快捷问题
+function retryMessage(errorMsg) {
+  const msgIndex = messages.value.findIndex(m => m.id === errorMsg.id)
+  if (msgIndex <= 0) return
+  const userMsg = messages.value[msgIndex - 1]
+  if (!userMsg || userMsg.role !== 'user') return
+
+  messages.value.splice(msgIndex, 1)
+
+  const aiMsgId = Date.now() + 1
+  messages.value.push({
+    id: aiMsgId,
+    role: 'assistant',
+    content: '',
+    streaming: true,
+    created_at: new Date().toISOString()
+  })
+
+  loading.value = true
+  try {
+    performStreamRequest(aiMsgId, userMsg.content)
+  } catch (e) {
+    ElMessage.error('发送失败，请重试')
+    const aiMsg = messages.value.find(m => m.id === aiMsgId)
+    if (aiMsg) {
+      aiMsg.content = '抱歉，回复失败，请重试'
+      aiMsg.streaming = false
+      aiMsg.error = true
+    }
+    loading.value = false
+  }
+}
+
 function sendQuickQuestion(question) {
   inputMessage.value = question
   sendMessage()
 }
 
-// 格式化时间
 function formatTime(dateStr) {
   if (!dateStr) {
     return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   }
 
   try {
-    // 处理ISO格式时间
     let date
     if (typeof dateStr === 'string') {
-      // 处理可能没有时区信息的时间
       if (dateStr.includes('T') && !dateStr.includes('Z') && !dateStr.includes('+')) {
-        date = new Date(dateStr + 'Z')  // 假设是UTC时间
+        date = new Date(dateStr + 'Z')
       } else {
         date = new Date(dateStr)
       }
@@ -396,7 +410,6 @@ function formatTime(dateStr) {
       return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
     }
 
-    // 转换为本地时间显示
     return date.toLocaleTimeString('zh-CN', {
       hour: '2-digit',
       minute: '2-digit',
@@ -407,10 +420,22 @@ function formatTime(dateStr) {
   }
 }
 
-// 滚动到底部
-function scrollToBottom() {
+function onMessagesScroll() {
+  if (!messagesContainer.value) return
+  const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
+  if (scrollTop + clientHeight < scrollHeight - 80) {
+    isUserScrolledUp.value = true
+    showScrollToBottom.value = true
+  }
+  if (scrollTop + clientHeight >= scrollHeight - 40) {
+    isUserScrolledUp.value = false
+    showScrollToBottom.value = false
+  }
+}
+
+function scrollToBottom(force) {
   nextTick(() => {
-    if (messagesContainer.value) {
+    if (messagesContainer.value && (!isUserScrolledUp.value || force)) {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
     }
   })
@@ -424,7 +449,7 @@ onMounted(() => {
 <style scoped>
 .ai-assistant {
   height: calc(100vh - 72px);
-  background: #f5f7fa;
+  background: #f8f9fb;
 }
 
 .chat-container {
@@ -432,7 +457,6 @@ onMounted(() => {
   height: 100%;
 }
 
-/* 左侧对话列表 */
 .conversation-sidebar {
   width: 280px;
   background: #fff;
@@ -498,12 +522,12 @@ onMounted(() => {
   padding: 40px 0;
 }
 
-/* 右侧聊天区域 */
 .chat-main {
   flex: 1;
   display: flex;
   flex-direction: column;
   background: #fff;
+  position: relative;
 }
 
 .chat-header {
@@ -520,7 +544,6 @@ onMounted(() => {
   padding: 16px;
 }
 
-/* 欢迎消息 */
 .welcome-message {
   text-align: center;
   padding: 60px 20px;
@@ -530,13 +553,13 @@ onMounted(() => {
   width: 100px;
   height: 100px;
   border-radius: 24px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #2563eb;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 24px;
   color: #fff;
-  box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 10px 40px rgba(37, 99, 235, 0.25);
 }
 
 .welcome-message h4 {
@@ -571,12 +594,11 @@ onMounted(() => {
 }
 
 .quick-questions .el-button:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #2563eb;
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.05);
 }
 
-/* 消息项 */
 .message-item {
   display: flex;
   gap: 8px;
@@ -630,7 +652,7 @@ onMounted(() => {
 }
 
 .message-item.user .message-bubble {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #2563eb;
   color: #fff;
   border-bottom-right-radius: 4px;
 }
@@ -648,17 +670,16 @@ onMounted(() => {
 }
 
 .user-avatar {
-  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+  background: #2563eb;
   color: #fff;
   font-weight: 600;
 }
 
 .ai-avatar {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #2563eb;
   color: #fff;
 }
 
-/* 打字动画 */
 .typing {
   display: flex;
   gap: 4px;
@@ -670,7 +691,7 @@ onMounted(() => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #2563eb;
   animation: bounce 1.4s infinite ease-in-out both;
 }
 
@@ -682,14 +703,35 @@ onMounted(() => {
   40% { transform: scale(1); opacity: 1; }
 }
 
-/* Markdown样式 */
+.streaming-text {
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.error-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #dc2626;
+}
+
+.error-content {
+  flex: 1;
+}
+
+.retry-btn {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
 .markdown-body {
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1;
 }
 
 .markdown-body :deep(p) {
-  margin: 0 0 6px 0;
+  margin: 0 0 2px 0;
   padding: 0;
 }
 
@@ -753,10 +795,10 @@ onMounted(() => {
 }
 
 .markdown-body :deep(blockquote) {
-  border-left: 3px solid #667eea;
+  border-left: 3px solid #2563eb;
   margin: 6px 0;
   padding: 6px 10px;
-  background: rgba(102, 126, 234, 0.05);
+  background: rgba(37, 99, 235, 0.05);
   border-radius: 0 4px 4px 0;
   color: #4b5563;
 }
@@ -788,7 +830,7 @@ onMounted(() => {
 }
 
 .markdown-body :deep(a) {
-  color: #667eea;
+  color: #2563eb;
   text-decoration: none;
   font-weight: 500;
 }
@@ -814,7 +856,6 @@ onMounted(() => {
   margin: 8px 0;
 }
 
-/* 代码块样式 */
 .markdown-body :deep(.code-block) {
   margin: 4px 0;
   border-radius: 6px;
@@ -868,7 +909,6 @@ onMounted(() => {
   line-height: 1.4;
 }
 
-/* 输入区域 */
 .chat-input {
   padding: 16px 24px;
   border-top: 1px solid #e5e7eb;
@@ -881,14 +921,46 @@ onMounted(() => {
   flex: 1;
 }
 
-/* 响应式 */
-    @media (max-width: 992px) {
-      /* 平板适配 */
-    }
+.scroll-to-bottom {
+  position: absolute;
+  bottom: 100px;
+  right: 40px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s;
+  z-index: 10;
+}
 
-    @media (max-width: 576px) {
-      /* 小手机适配 */
-    }
+.scroll-to-bottom:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@media (max-width: 992px) {
+}
+
+@media (max-width: 576px) {
+}
+
 @media (max-width: 768px) {
   .conversation-sidebar {
     width: 60px;
@@ -907,6 +979,7 @@ onMounted(() => {
     justify-content: center;
     padding: 8px;
   }
-    .d-flex { flex-wrap: wrap; }
+
+  .d-flex { flex-wrap: wrap; }
 }
 </style>

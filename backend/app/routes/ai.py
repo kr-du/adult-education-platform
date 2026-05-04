@@ -1,17 +1,14 @@
 """AI学习助手API"""
+import json
 from flask import Blueprint, request, jsonify, Response, stream_with_context
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.user import User
 from app.models.ai import AiConversation, AiMessage
 from app.services.ai_service import ai_service, get_system_prompt
+from app.utils.auth import get_current_user
 
 ai_bp = Blueprint('ai', __name__)
-
-
-def get_current_user():
-    user_id = int(get_jwt_identity())
-    return User.query.get(user_id)
 
 
 @ai_bp.route('/conversations', methods=['GET'])
@@ -204,7 +201,8 @@ def chat_stream():
         full_reply = []
         for chunk in ai_service.chat_stream(messages):
             full_reply.append(chunk)
-            yield f"data: {chunk}\n\n"
+            json_string = json.dumps({"text": chunk})
+            yield f"data: {json_string}\n\n"
 
         # 保存完整回复
         ai_msg = AiMessage(

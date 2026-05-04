@@ -189,65 +189,14 @@ watch(menuOpen, (newVal) => {
   right: 0;
   z-index: 1000;
   padding: 16px 0;
-  transition: all 0.3s ease;
-  background: transparent;
+  transition: box-shadow 0.3s ease, padding 0.3s ease;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .navbar.scrolled {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   padding: 12px 0;
-}
-
-.navbar.top-not-home {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.navbar.top-not-home .brand-text {
-  color: #1f2937;
-}
-
-.navbar.top-not-home .nav-link {
-  color: #4b5563;
-}
-
-.navbar.top-not-home .nav-link:hover {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-}
-
-.navbar.top-not-home .nav-link.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-}
-
-.navbar.top-not-home .user-name {
-  color: #1f2937;
-}
-
-.navbar.top-not-home .arrow-icon {
-  color: #9ca3af;
-}
-
-.navbar.top-not-home .btn-login {
-  color: #667eea;
-  border-color: #667eea;
-}
-
-.navbar.top-not-home .btn-register {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-}
-
-.navbar.top-not-home .user-trigger {
-  background: #f3f4f6;
-}
-
-.navbar.top-not-home .user-trigger:hover {
-  background: #e5e7eb;
 }
 
 .navbar .container {
@@ -269,8 +218,8 @@ watch(menuOpen, (newVal) => {
 .brand-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 10px;
+  background: #2563eb;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -280,12 +229,7 @@ watch(menuOpen, (newVal) => {
 .brand-text {
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
-  transition: color 0.3s;
-}
-
-.navbar.scrolled .brand-text {
-  color: #1f2937;
+  color: #111827;
 }
 
 .navbar-toggler {
@@ -304,17 +248,11 @@ watch(menuOpen, (newVal) => {
   display: block;
   width: 24px;
   height: 2px;
-  background: #fff;
+  background: #111827;
   border-radius: 2px;
   transition: all 0.3s;
   position: absolute;
   left: 4px;
-}
-
-.navbar.scrolled .toggler-icon,
-.navbar.scrolled .toggler-icon::before,
-.navbar.scrolled .toggler-icon::after {
-  background: #1f2937;
 }
 
 .toggler-icon {
@@ -366,36 +304,34 @@ watch(menuOpen, (newVal) => {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  color: rgba(255, 255, 255, 0.85);
+  color: #4b5563;
   text-decoration: none;
   font-size: 15px;
   font-weight: 500;
-  border-radius: 8px;
+  border-radius: 6px;
   transition: all 0.2s;
-}
-
-.navbar.scrolled .nav-link {
-  color: #4b5563;
+  position: relative;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-}
-
-.navbar.scrolled .nav-link:hover {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
+  background: #f3f4f6;
+  color: #111827;
 }
 
 .nav-link.active {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  color: #111827;
+  background: transparent;
 }
 
-.navbar.scrolled .nav-link.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  background: #2563eb;
+  border-radius: 1px;
 }
 
 .nav-actions {
@@ -409,26 +345,18 @@ watch(menuOpen, (newVal) => {
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  border-radius: 50px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.navbar.scrolled .user-trigger {
   background: #f3f4f6;
 }
 
 .user-trigger:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.navbar.scrolled .user-trigger:hover {
   background: #e5e7eb;
 }
 
 .user-avatar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #2563eb;
   color: #fff;
   font-weight: 600;
   font-size: 14px;
@@ -437,80 +365,51 @@ watch(menuOpen, (newVal) => {
 .user-name {
   font-size: 14px;
   font-weight: 500;
-  color: #fff;
-}
-
-.navbar.scrolled .user-name {
-  color: #1f2937;
+  color: #111827;
 }
 
 .arrow-icon {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
-}
-
-.navbar.scrolled .arrow-icon {
   color: #9ca3af;
+  font-size: 12px;
 }
 
 .btn-login {
   padding: 10px 20px;
-  color: #fff;
+  color: #2563eb;
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
-  border-radius: 10px;
+  border-radius: 8px;
   transition: all 0.2s;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.navbar.scrolled .btn-login {
-  color: #667eea;
-  border-color: #667eea;
+  border: 1px solid #2563eb;
+  background: transparent;
 }
 
 .btn-login:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.navbar.scrolled .btn-login:hover {
-  background: rgba(102, 126, 234, 0.1);
+  background: #f0f5ff;
 }
 
 .btn-register {
   padding: 10px 20px;
-  background: #fff;
-  color: #667eea;
+  background: #2563eb;
+  color: #fff;
   text-decoration: none;
   font-size: 14px;
   font-weight: 600;
-  border-radius: 10px;
+  border-radius: 8px;
   transition: all 0.2s;
-}
-
-.navbar.scrolled .btn-register {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
+  border: 1px solid #2563eb;
 }
 
 .btn-register:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  color: #667eea;
+  background: #1d4ed8;
+  border-color: #1d4ed8;
 }
 
-.navbar.scrolled .btn-register:hover {
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  color: #fff;
-}
-
-/* 移动端关闭按钮默认隐藏 */
 .mobile-close {
   display: none !important;
 }
 
-/* 响应式 */
 @media (max-width: 992px) {
   .navbar-toggler {
     display: block;
@@ -519,11 +418,11 @@ watch(menuOpen, (newVal) => {
   .navbar-menu {
     position: fixed;
     top: 0;
-    left: 0;
+    right: 0;
     width: 100vw;
     height: 100vh;
     height: 100dvh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #ffffff;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
@@ -550,18 +449,18 @@ watch(menuOpen, (newVal) => {
     height: 40px;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.2);
+    background: #f3f4f6;
     border: none;
     border-radius: 50%;
-    color: #fff;
+    color: #6b7280;
     cursor: pointer;
     transition: all 0.3s;
     z-index: 10;
   }
 
   .mobile-close:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: rotate(90deg);
+    background: #e5e7eb;
+    color: #111827;
   }
 
   .mobile-backdrop {
@@ -601,16 +500,25 @@ watch(menuOpen, (newVal) => {
   .nav-link {
     font-size: 18px;
     padding: 16px 24px;
-    color: rgba(255, 255, 255, 0.9);
+    color: #111827;
     justify-content: center;
-    border-radius: 12px;
+    border-radius: 6px;
     width: 100%;
     max-width: 300px;
   }
 
-  .nav-link:hover,
+  .nav-link:hover {
+    background: #f3f4f6;
+    color: #111827;
+  }
+
   .nav-link.active {
-    background: rgba(255, 255, 255, 0.2);
+    background: #f3f4f6;
+    color: #111827;
+  }
+
+  .nav-link.active::after {
+    display: none;
   }
 
   .nav-actions {
@@ -623,20 +531,24 @@ watch(menuOpen, (newVal) => {
   }
 
   .user-trigger {
-    background: rgba(255, 255, 255, 0.2);
+    background: #f3f4f6;
     justify-content: center;
     padding: 14px 24px;
-    border-radius: 12px;
+    border-radius: 6px;
     width: 100%;
     max-width: 300px;
   }
 
+  .user-trigger:hover {
+    background: #e5e7eb;
+  }
+
   .user-name {
-    color: #fff;
+    color: #111827;
   }
 
   .arrow-icon {
-    color: rgba(255, 255, 255, 0.7);
+    color: #9ca3af;
   }
 
   .btn-login,
@@ -645,17 +557,19 @@ watch(menuOpen, (newVal) => {
     max-width: 300px;
     text-align: center;
     padding: 14px;
-    border-radius: 12px;
+    border-radius: 8px;
   }
 
   .btn-login {
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.5);
+    color: #2563eb;
+    border-color: #2563eb;
+    background: transparent;
   }
 
   .btn-register {
-    background: #fff;
-    color: #667eea;
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
   }
 
   .hide-on-mobile {

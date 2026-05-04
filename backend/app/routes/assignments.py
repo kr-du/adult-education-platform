@@ -1,28 +1,21 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
-from app.models.assignment import Assignment, Submission
-from app.models.course import Course, Enrollment
 from app.models.user import User
+from app.models.course import Course, Lesson, Enrollment
+from app.models.assignment import Assignment, Submission
+from app.utils.auth import get_current_user, teacher_required
 
 assignments_bp = Blueprint('assignments', __name__)
-
-
-def get_current_user():
-    user_id = int(get_jwt_identity())
-    return User.query.get(user_id)
 
 
 # ========== 教师端 API ==========
 
 @assignments_bp.route('/', methods=['POST'])
-@jwt_required()
+@teacher_required
 def create_assignment():
-    """教师创建作业"""
     user = get_current_user()
-    if user.role not in ['teacher', 'admin']:
-        return jsonify({'error': '无权限'}), 403
 
     data = request.get_json()
     course = Course.query.get_or_404(data['course_id'])
@@ -56,9 +49,8 @@ def create_assignment():
 
 
 @assignments_bp.route('/<int:assignment_id>', methods=['PUT'])
-@jwt_required()
+@teacher_required
 def update_assignment(assignment_id):
-    """教师更新作业"""
     user = get_current_user()
     assignment = Assignment.query.get_or_404(assignment_id)
     course = Course.query.get(assignment.course_id)
@@ -91,9 +83,8 @@ def update_assignment(assignment_id):
 
 
 @assignments_bp.route('/<int:assignment_id>', methods=['DELETE'])
-@jwt_required()
+@teacher_required
 def delete_assignment(assignment_id):
-    """教师删除作业"""
     user = get_current_user()
     assignment = Assignment.query.get_or_404(assignment_id)
     course = Course.query.get(assignment.course_id)
@@ -108,12 +99,9 @@ def delete_assignment(assignment_id):
 
 
 @assignments_bp.route('/teacher', methods=['GET'])
-@jwt_required()
+@teacher_required
 def get_teacher_assignments():
-    """获取教师的所有作业"""
     user = get_current_user()
-    if user.role not in ['teacher', 'admin']:
-        return jsonify({'error': '无权限'}), 403
 
     courses = Course.query.filter_by(teacher_id=user.id).all()
     course_ids = [c.id for c in courses]
@@ -266,12 +254,9 @@ def get_submissions(assignment_id):
 
 
 @assignments_bp.route('/grade/<int:submission_id>', methods=['POST'])
-@jwt_required()
+@teacher_required
 def grade_submission(submission_id):
-    """教师批改作业"""
     user = get_current_user()
-    if user.role not in ['teacher', 'admin']:
-        return jsonify({'error': '无权限'}), 403
 
     submission = Submission.query.get_or_404(submission_id)
     data = request.get_json()
