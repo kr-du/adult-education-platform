@@ -55,3 +55,7 @@ desktop.ini
 
 # Docker
 mysql_data/
+
+# IDE/Tools
+.claude/
+.trae/
