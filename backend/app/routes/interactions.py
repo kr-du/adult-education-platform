@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.user import User
-from app.models.course import Course
+from app.models.course import Course, Enrollment, LessonProgress, Lesson
 from app.models.interaction import Review, Message, Question, Answer, CourseNotice
 from app.models.announcement import Discussion
 from app.utils.auth import get_current_user, teacher_required, get_pagination_params
@@ -154,7 +154,7 @@ def get_messages():
         'current_page': page
     })
 
-
+# 标记消息为已读
 @interactions_bp.route('/messages/<int:message_id>/read', methods=['PUT'])
 @jwt_required()
 def mark_message_read(message_id):
@@ -172,7 +172,7 @@ def mark_message_read(message_id):
         'data': message.to_dict()
     })
 
-
+# 批量标记所有消息为已读
 @interactions_bp.route('/messages/read-all', methods=['PUT'])
 @jwt_required()
 def mark_all_messages_read():
@@ -183,7 +183,7 @@ def mark_all_messages_read():
 
     return jsonify({'message': '已全部标记为已读'})
 
-
+# 获取未读消息数量
 @interactions_bp.route('/messages/unread-count', methods=['GET'])
 @jwt_required()
 def get_unread_count():
@@ -194,7 +194,7 @@ def get_unread_count():
 
 
 # ==================== Questions & Answers (答疑互动) ====================
-
+# 获取课程下的所有问题
 @interactions_bp.route('/questions/course/<int:course_id>', methods=['GET'])
 def get_course_questions(course_id):
     page = request.args.get('page', 1, type=int)
@@ -218,7 +218,7 @@ def get_course_questions(course_id):
         'current_page': page
     })
 
-
+# 创建问题
 @interactions_bp.route('/questions/', methods=['POST'])
 @jwt_required()
 def create_question():
@@ -295,7 +295,7 @@ def create_answer(question_id):
         'answer': answer.to_dict()
     }), 201
 
-
+# 标记问题为已解决
 @interactions_bp.route('/questions/<int:question_id>/resolve', methods=['PUT'])
 @jwt_required()
 def resolve_question(question_id):
@@ -419,6 +419,10 @@ def get_course_students(course_id):
         progress_pct = round((completed_lessons / total_lessons) * 100, 1) if total_lessons > 0 else 0
 
         students.append({
+            'student_id': student.id,
+            'student_name': student.real_name or student.username,
+            'student_email': student.email,
+            'student_avatar': student.avatar,
             'user_id': student.id,
             'username': student.username,
             'real_name': student.real_name,
