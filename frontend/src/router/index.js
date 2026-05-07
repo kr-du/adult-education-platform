@@ -223,11 +223,15 @@ router.beforeEach((to, from, next) => {
   const token = userStore.token;
   const userRole = userStore.user.role;
 
-  if (to.meta.requiresAuth && !token) {
+  // 检查所有匹配的路由记录，确保父路由上的 meta 也能被检测到
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  const requiredRole = to.matched.find((record) => record.meta.role)?.meta.role;
+
+  if (requiresAuth && !token) {
     console.warn("需要登录才能访问:", to.path);
     next("/login");
-  } else if (to.meta.role && userRole !== to.meta.role) {
-    console.warn("用户角色不匹配，需要:", to.meta.role, "当前:", userRole);
+  } else if (requiredRole && userRole !== requiredRole) {
+    console.warn("用户角色不匹配，需要:", requiredRole, "当前:", userRole);
     next("/");
   } else {
     next();
