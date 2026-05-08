@@ -131,7 +131,7 @@ const teachingStats = ref(null)
 const formRef = ref(null)
 const pwdFormRef = ref(null)
 
-const uploadUrl = computed(() => import.meta.env.VITE_API_BASE_URL + '/api/upload/avatar')
+const uploadUrl = '/api/uploads/avatar'
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem('token')}`
 }))

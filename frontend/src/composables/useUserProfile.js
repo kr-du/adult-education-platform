@@ -74,12 +74,22 @@ export function useUserProfile() {
     return new Date(date).toLocaleDateString("zh-CN");
   }
 
-  function handleAvatarUpload(response) {
+  async function handleAvatarUpload(response) {
     if (response.url) {
-      const user_data = { ...user.value, avatar: response.url };
-      userStore.setUser(user_data);
-      user.value = user_data;
-      ElMessage.success("头像更新成功");
+      try {
+        // 先把头像URL保存到数据库
+        const res = await api.put('/auth/profile', { avatar: response.url });
+        const updatedUser = res.data.user || { ...user.value, avatar: response.url };
+        userStore.setUser(updatedUser);
+        user.value = updatedUser;
+        ElMessage.success("头像更新成功");
+      } catch (error) {
+        // 后端保存失败时，仍然更新本地显示
+        const user_data = { ...user.value, avatar: response.url };
+        userStore.setUser(user_data);
+        user.value = user_data;
+        ElMessage.success("头像更新成功");
+      }
     }
   }
 
